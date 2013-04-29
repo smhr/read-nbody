@@ -30,7 +30,7 @@ implicit none
 real*8::start, finish ! For cpu_time subroutine.
 integer*4::i,j,l,k,ll ! loop counter variables.
 integer*4::IO,code, err, debug
-integer::tout
+integer::tscreen, tout ! Frequency of output on screen, on harddisk.
 integer,dimension(13)::buff ! This related to measuring size of input file.
 integer*4::status ! This is related to measuring size of input file.
 integer::loop_index 
@@ -96,7 +96,8 @@ rstep = 0.01 ! Bin length in astronomical unit for calculating lagrangian radii.
 ! ************ Code options ****************
 ! ******************************************
  code = 2  	! 1:NBODY6 custom, 2: NBODY6
- tout = 1		! Time interval of output on screen. (NBODY6 custom: Myr, NBODY6: N-body unit)
+ tscreen = 1		! Time interval of output on screen. (NBODY6 custom: Myr, NBODY6: N-body unit)
+ tout = 1		! Time interval of output on harddisk. (NBODY6 custom: Myr, NBODY6: N-body unit)
  debug = 0		! 1: Debug mode.
  diss_check = 1		! 1: Check dissolution of cluster; 0: No check.
  Ndiss = 0.01		! By reaching to this fraction of initial number of stars, the cluster is considered as a dissolved cluster; 0: Suppress this option.
@@ -120,7 +121,7 @@ write(2,*) "      T(NBODY)   T(Myr)   NTOT(in Rt)    MTOT(in Rt)       Rh       
 ! *******************************************
 ! do l=1,10 
 
-! By activating this loop, you can define exact time in terms of output interval (DELTAT in NBODY6 or dtout in mcluster [N-body units (Myr in Nbody6 custom)]).
+! By activating this loop, you can define exact time in terms of output interval (DELTAT in NBODY6 or dtscreen in mcluster [N-body units (Myr in Nbody6 custom)]).
 
 
 DO WHILE ( .TRUE. ) ! Repeating the loop until the end of input file.
@@ -141,6 +142,15 @@ else if ( code == 2 ) then
 		call termination ( IO, err)
 	endif
 endif
+
+! *******************************************
+if ( code == 1 ) then
+	if ( mod (int(nint(AS(10))),tout) /= 0 ) cycle
+elseif ( code == 2 ) then
+	if ( mod (int(nint(AS(1))),tout) /= 0 ) cycle
+endif
+! *******************************************
+
 ! *******************************************
 ! This condition is for appropriate termination of the program if cluster dissolves.
 if ( iNTOT > 0 ) then
@@ -396,7 +406,7 @@ if  ( code == 2 ) write(7,'(2f9.2, 5f10.5)') AS(1), AS(11)*AS(1), ( LR(i),i=1,5 
 
 !************************************
 ! 	
-! 	call writeout ( code, output_file, mtot, LR, tout, NTOT, NK, AS, BODYS, XS, VS, RADIUS, NAME, KSTAR, ZLMSTY ) ! Writing out outputs.
+! 	call writeout ( code, output_file, mtot, LR, tscreen, NTOT, NK, AS, BODYS, XS, VS, RADIUS, NAME, KSTAR, ZLMSTY ) ! Writing out outputs.
 !************************************
 if ( code == 1 ) then
 
@@ -455,7 +465,7 @@ do i=1,NTOT
 enddo
 	if ( code == 1 ) then
 		write(2,'(2f11.1, i12, 3f15.5)') AS(1), AS(10), NTOT, mtot, LR(3), AS(25)*AS(3)
-		if ( mod (int(nint(AS(10))),tout) == 0 ) then 
+		if ( mod (int(nint(AS(10))),tscreen) == 0 ) then 
 			write(*,*) 
 			write(*,*) "Time(NBODY)   Time(Myr)   Total number    Total mass       Rh            Rt"
 			write(*,'(2f11.1, i12, 3f15.2)')AS(1), AS(10), NTOT, mtot, LR(3), AS(25)*AS(3)
@@ -463,7 +473,7 @@ enddo
 	elseif ( code == 2 ) then
 		write(2,'(2f11.1, i12, 3f15.5)')AS(1), AS(11)*AS(1), NTOT, mtot, LR(3), AS(5)*AS(3)
 ! 		AS(11)*AS(1)=TSCALE*TTOT, 
-		if ( mod (int(nint(AS(1))),tout) == 0 ) then 
+		if ( mod (int(nint(AS(1))),tscreen) == 0 ) then 
 			write(*,*) 
 			write(*,*) "Time(NBODY)   Time(Myr)   Total number    Total mass       Rh            Rt"
 			write(*,'(2f11.1, i12, 3f15.2)')AS(1), AS(11)*AS(1), NTOT, mtot, LR(3), AS(5)*AS(3)
