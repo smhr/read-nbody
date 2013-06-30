@@ -96,8 +96,8 @@ rstep = 0.01 ! Bin length in astronomical unit for calculating lagrangian radii.
 ! ************ Code options ****************
 ! ******************************************
  code = 2  	! 1:NBODY6 custom, 2: NBODY6
- tscreen = 1		! Time interval of output on screen. (NBODY6 custom: Myr, NBODY6: N-body unit)
- tout = 1		! Time interval of output on harddisk. (NBODY6 custom: Myr, NBODY6: N-body unit)
+ tscreen = 1		! Time interval of output on screen & harddisk. (NBODY6 custom: Myr, NBODY6: N-body unit)
+ tout = 1000		! Time interval of output on screen & harddisk. It Also prevent neighbor arrays and kdtree2 pointers to be allocated. So if you have many time snapshots, by increasing 'tout', you can pass the memory overflow problem. (NBODY6 custom: Myr, NBODY6: N-body unit)
  debug = 0		! 1: Debug mode.
  diss_check = 1		! 1: Check dissolution of cluster; 0: No check.
  Ndiss = 0.01		! By reaching to this fraction of initial number of stars, the cluster is considered as a dissolved cluster; 0: Suppress this option.
@@ -144,11 +144,14 @@ else if ( code == 2 ) then
 endif
 
 ! *******************************************
-if ( code == 1 ) then
-	if ( mod (int(nint(AS(10))),tout) /= 0 ) cycle
-elseif ( code == 2 ) then
-	if ( mod (int(nint(AS(1))),tout) /= 0 ) cycle
-endif
+! if ( code == 1 ) then
+! 	if ( mod (int(nint(AS(10))),tout) /= 0 ) cycle
+! elseif ( code == 2 ) then
+! print*,"AS(1)=",AS(1)
+! bbb=mod (int(nint(AS(1))),tout)
+! 	print*, bbb
+! 	if ( mod (int(nint(AS(1))),tout) /= 0 ) cycle
+! endif
 ! *******************************************
 
 ! *******************************************
@@ -230,6 +233,21 @@ else if ( code == 2 ) then
 		call termination ( IO, err)
 	endif
 	
+endif
+!************************************
+! Check "dtout" option:
+if ( code == 1 ) then
+	if ( mod (int(nint(AS(10))),tout) /= 0 )then
+		deallocate (AS, iBODYS, iXS, iVS, iRADIUS, iNAME, iKSTAR, iZLMSTY)
+		deallocate (ASS, BODYSS, XSS, VSS)
+		cycle
+	endif
+elseif ( code == 2 ) then
+	if ( mod (int(nint(AS(1))),tout) /= 0 ) then
+		deallocate (AS, iBODYS, iXS, iVS, iRADIUS, iNAME, iKSTAR, iZLMSTY)
+		deallocate (ASS, BODYSS, XSS, VSS)
+		cycle
+	endif
 endif
 !************************************
 !	write(*,'(i10, f11.1, i 10)')NTOT,AS(10),N

@@ -3,7 +3,7 @@
 ! Author: S.Mohammad Hoseini Rad
 ! smhr313@gmail.com
 ! Nov 2012, IASBS, Zanjan
-! Last modification: 10 Apr 2013
+! Last modification: 30 June 2013
 !**************************************************************
 
 To compile, please use "compile.sh" script.
@@ -44,3 +44,5 @@ for calculation of total number of stars and other main specifications of the cl
 are made in the "model_name" directory with the same prefix.
 
 Optimization options "-O3" and "-ffast-math" were added to "compile.sh" file.
+***************
+30 June 2013: "dtout" option was added. It is an option for time interval of output on screen & harddisk. It Also prevent neighbor arrays and kdtree2 pointers to be allocated. So if you have many time snapshots, by increasing 'tout', you can pass the memory overflow problem. (NBODY6 custom: Myr, NBODY6: N-body unit).
