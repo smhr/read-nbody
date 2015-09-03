@@ -3,7 +3,7 @@
 ! Author: S.Mohammad Hoseini Rad
 ! smhr313@gmail.com
 ! Nov 2012, IASBS, Zanjan
-! Last modification: 24 September 2013
+! Last modification: 3 September 2015 / 12 Shahrivar 1394
 !**************************************************************
 !     This program is free software; you can redistribute it and/or modify
 !     it under the terms of the GNU General Public License as published by
@@ -54,7 +54,7 @@ integer,dimension(:),allocatable::NAME,KSTAR
 real*8,dimension(:),allocatable::AS,BODYS,RADIUS,ZLMSTY
 real*8,dimension(:,:),allocatable::XS,VS
 real*4,dimension(:,:),allocatable::XSS,VSS
-real*4,dimension(:),allocatable::BODYSS,ASS  ! For converting single precesion to double precesion ( if code = 2).
+real*4,dimension(:),allocatable::BODYSS,ASS  ! For converting single precision to double precision ( if code = 2).
 ! ******************************************
 real*8::mtot, imtot, T6, mtot0
 integer,dimension(:,:),allocatable::list_neighbor_idx ! Neighbor index array.
@@ -80,29 +80,33 @@ real::Ndiss, Mdiss
 ! ******************************************
 character(len=40)::model_name, dir_command
 ! ******************************************
-real*8::rx, ry, rz, vx, vy, vz, Ebin, a, ecc, Lx, Ly, Lz
+real*8::rx, ry, rz, vx, vy, vz, Ebin, a, ecc, ecc2, Lx, Ly, Lz, fbin0, fbint
 real*8,dimension(:,:),allocatable::del_r, del_v2, nei_BODYS, L2
 real*8,dimension(:,:),allocatable::idel_r, idel_v2, inei_bodys, iL2
 integer*8,dimension(:,:),allocatable::nei_NAME, inei_NAME
-integer::nid, find_binary
+integer::nid, find_binary, Nbin
 ! *****************************************
 real*8::Mstar, Tstar, Rstar, Vstar
 real,parameter::G = 0.0043009211 ! In pc*km^2/s^2*M_sun
 real,parameter::AU = 206264.806 ! pc to AU
 ! ******************************************
+integer:: res_INIT_NTOT
+real*8:: res_mtot0
 
  call cpu_time(start)
 
 ! ******************************************
 !** Initialization of internal variables ***
 ! Please don't change this variable.
-IO = 0;
+IO = 0
 err = 0
 status = 0
 n_neighbor = 5 ! Number of nearest neighbors in Casterano & Hut (1985) and Aarseth (2001) method.
 loop_index = 0
 INIT_NTOT = 0; iNTOT = 0; imtot = 0
 rstep = 0.01 ! Bin length in astronomical unit for calculating lagrangian radii.
+res_INIT_NTOT = 0
+res_mtot0 = 0.
 
 ! ************ Code options ****************
 ! ******************************************
@@ -112,15 +116,15 @@ rstep = 0.01 ! Bin length in astronomical unit for calculating lagrangian radii.
  debug = 0		! 1: Debug mode.
  diss_check = 1		! 1: Check dissolution of cluster; 0: No check.
  Ndiss = 0		! By reaching to this fraction of initial number of stars, the cluster is considered as a dissolved cluster; 0: Suppress this option.
- Mdiss = 0.01		! By reaching to this fraction of initial mass, the cluster is considered as a dissolved cluster; 0: Suppress this option.
- major_output = 0
+ Mdiss = 0.001		! By reaching to this fraction of initial mass, the cluster is considered as a dissolved cluster; 0: Suppress this option.
+ major_output = 1 
 ! Please note just use one of Ndiss or Mdiss options.
 !  model_name = 'N7500d8.5Rh3nei5_in_Rt'
-find_binary = 0 ! 0: Skip to find binary; 1: Find binaries.
+find_binary = 1 ! 0: Skip to find binary; 1: Find binaries.
  
  ! ********* Input & Output files. *********
  ! *****************************************
- call get_model_name ( input_file, model_name )
+ call get_model_name ( input_file, model_name, res_INIT_NTOT, res_mtot0 )
 !  dir_command = 'rm -f ./binary.txt; touch ./binary.txt'
 !  call system ( dir_command )
 !  input_file='N7500.POS' ! Input file.
@@ -139,7 +143,7 @@ find_binary = 0 ! 0: Skip to find binary; 1: Find binaries.
 	write(*,*)"Size of file is", buff(8), "Byte."
  endif
 ! ******************************************
-write(2,*) "  T(NB)   T(Myr)   N      M       M/M0      Rh      Rt      Rc     Rc/Rh    RC    Rh/Rt"
+write(2,*) "    T_NB    T_Myr   N        M      M_ratio    Rh       Rt       Rc     Rc_O_Rh     RC    Rh_O_Rt   fbin0    fbint"
 write(7,*)" T(NBODY)  Time(Myr)   LR_0.01  LR_0.05  LR_0.50  LR_0.75  LR_0.95    Rt      Rc     Rc/Rh    RC    Rh/Rt"
 ! write(2,*) "      T(NBODY)   T(Myr)   NTOT(in Rt)    MTOT(in Rt)       Rh            Rt"
 
@@ -168,7 +172,9 @@ else if ( code == 2 ) then
 		call termination ( IO, err)
 	endif
 endif
-
+if ( res_INIT_NTOT /= 0 ) then
+        INIT_NTOT = res_INIT_NTOT
+endif
 ! *******************************************
 if ( code == 1 ) then
 	if ( mod (int(nint(AS(10))),tout) /= 0 ) cycle
@@ -250,11 +256,11 @@ else if ( code == 2 ) then
 		(iiNAME(J),J=1,iiNTOT)
 	if (debug == 1 ) write (*,*)(k,ASS(K),K=1,NK)
 
-	do J=1, NK	! Convert to double precesion
+	do J=1, NK	! Convert to double precision
 		AS(J) = ASS(J)
 	enddo
 
-	do J=1, iiNTOT	! Convert to double precesion
+	do J=1, iiNTOT	! Convert to double precision
 		iiBODYS(J) = BODYSS(J)
 		do K=1, 3
 			iiXS(K,J) = XSS(K,J)
@@ -331,7 +337,7 @@ if (debug == 1 ) write (*,*)"Allocating test_name."
 					iZLMSTY(k) = iiZLMSTY(i)
 ! 					rho(k) = irho(i)
 		else
-			print*,"zzzzzzzzzzzzzz!", iiname(i), iibodys(i)
+!			print*,"zzzzzzzzzzzzzz!", iiname(i), iibodys(i)
 		endif
 
   enddo
@@ -582,7 +588,9 @@ enddo
 
 if ( AS(1) < 0.0001) mtot0 = mtot
 rt = rt * Rstar
-
+if ( res_mtot0 /= 0. ) then
+        mtot0 = res_mtot0
+endif
 do while ( check /= 6 )
 	mtemp = 0
 ! print*,mtot0, mtot, check, rtemp
@@ -644,7 +652,7 @@ if (debug == 1 ) write (*,*)"Calculating Core Radius. Done."
 !************************************
 if ( find_binary == 1 ) then
 if (debug == 1 ) write (*,*)"Finding binaries."
-Ebin = 0; a = 0; ecc = 0
+Ebin = 0; a = 0; ecc = 0; ecc2 = 0; Nbin = 0; fbin0 = 0; fbint = 0; j = 0
 
 !  if (as(1)==800) print*,name(list_neighbor_idx(1,2)), BODYS(list_neighbor_idx(1,2)),&
 ! 		  & BODYS(list_neighbor_idx(1,3)), "^^^^^^^^^^^^^^^^"
@@ -652,7 +660,7 @@ Ebin = 0; a = 0; ecc = 0
 do i = 1, NTOT
 	if (name(i)==0) print*,"name=",name(i),"for i =", i
 	ll=0
-		do ll=2, n_neighbor+1
+	do ll=2, n_neighbor+1
 
 		nei_BODYS(i, ll) = nei_BODYS(i, ll) * Mstar
 		del_r(i, ll) = del_r(i, ll) * Rstar
@@ -669,29 +677,40 @@ do i = 1, NTOT
 
 		a = - 0.5 * G * BODYS(i) * nei_BODYS(i, ll) / Ebin
 
-
-		ecc =  sqrt( 1 - ( BODYS(i) + nei_BODYS(i, ll) ) * L2(i, ll) / ( G * a *   BODYS(i) * BODYS(i) &
+               
+		ecc2 = ( 1 - ( BODYS(i) + nei_BODYS(i, ll) ) * L2(i, ll) / ( G * a *   BODYS(i) * BODYS(i) &
 			& * nei_BODYS(i, ll) * nei_BODYS(i, ll) ) )
+                if ( ecc2 >= 0 ) then
+                        ecc = sqrt(ecc2)
+                else
+                        ecc = 0
+                endif
 
 ! 		if (name(i)==80373)	write (*,'(a15, 3i8, 7f12.2)')"********", i, name(i), nei_NAME(i ,ll), BODYS(i),&
 ! 			& nei_BODYS(i ,ll), ecc, a*AU, del_r(i, ll)*AU,&
 ! 			& list_neighbor_dis (i,ll)*AU*Rstar, Ebin
 
-		if ( Ebin < -100 ) then
+		if ( Ebin < 0 ) then
 			if ( NAME(i) == nei_NAME(i, ll) ) cycle
-			write (*,'(a15, 3i8, 6f12.2)')"binary", i, name(i), nei_NAME(i ,ll), BODYS(i),&
-			& nei_BODYS(i ,ll), ecc, a*AU, del_r(i, ll)*AU,	Ebin
-
-			write (10,'(2f10.3, 3i10, 6f12.2)') AS(1), T6, i, name(i), nei_NAME(i ,ll), BODYS(i),&
+		!	write (*,'(a15, 2i8, 6f12.2)')"binary", name(i), nei_NAME(i ,ll), BODYS(i),&
+		!	& nei_BODYS(i ,ll), ecc, a*AU, del_r(i, ll)*AU,	Ebin
+                        Nbin = Nbin + 1
+			write (10,'(2f10.3, 2i10, 6f12.2)') AS(1), T6, name(i), nei_NAME(i ,ll), BODYS(i),&
 			& nei_BODYS(i ,ll), ecc, a*AU, del_r(i, ll)*AU, Ebin
 	      endif
 	enddo
 enddo
-if (debug == 1 ) write (*,*)"Done."
 
+Nbin = Nbin / 2  !Because each binary counted twice.
+
+if (debug == 1 ) then 
+        print*,Nbin, "binaries were found."
+        write (*,*)"Done."
 endif
+endif !  End of main binary finding condition.
 
-
+fbin0 = ( Nbin * 2. ) / INIT_NTOT
+fbint =  ( Nbin * 2. ) / NTOT
 !************************************
 !
 ! 	call writeout ( code, output_file, mtot, LR, tscreen, NTOT, NK, AS, BODYS, XS, VS, RADIUS, NAME, KSTAR, ZLMSTY ) ! Writing out outputs.
@@ -732,13 +751,14 @@ enddo
 endif !End of major_output loop
 
 ! Write to "overview.txt" file.
-		write(2,'(2f8.1, i7, f11.2, f8.3, 6f9.3)')AS(1), T6, NTOT, mtot, mtot/mtot0,&
-			& LR(3), rt, rc, rc/LR(3), AS(13)*Rstar, LR(3)/rt
+		write(2,'(2f8.1, i7, f11.2, f8.3, 8f9.3)')AS(1), T6, NTOT, mtot, mtot/mtot0,&
+			& LR(3), rt, rc, rc/LR(3), AS(13)*Rstar, LR(3)/rt, fbin0, fbint
 		if ( mod (int(nint(T6)),tscreen) == 0 ) then
 			write(*,*)
-			write(*,*) "  T(NB)   T(Myr)   N        M       M/M0      Rh      Rt         Rc     Rc/Rh     RC      Rh/Rt"
-			write(*,'(2f8.1, i7, f11.2, f8.3, 6f9.3)')AS(1), T6, NTOT, mtot, mtot/mtot0,&
-			& LR(3), rt, rc, rc/LR(3), AS(13)*Rstar, LR(3)/rt
+			write(*,*) "    T_NB    T_Myr   N        M      M_ratio    Rh       Rt       Rc&
+                        &     Rc_O_Rh     RC    Rh_O_Rt   fbin0    fbint"
+			write(*,'(2f8.1, i7, f11.2, f8.3, 8f9.3)')AS(1), T6, NTOT, mtot, mtot/mtot0,&
+			& LR(3), rt, rc, rc/LR(3), AS(13)*Rstar, LR(3)/rt, fbin0, fbint
 		endif
 ! 	
 	if (debug == 1 ) then
@@ -750,7 +770,7 @@ endif !End of major_output loop
  write(7,'(2f9.2, 9f10.5)') AS(1), T6, ( LR(i),i=1,5 ), rt, rc, rc/LR(3), AS(13)*Rstar, LR(3)/rt
 
 !************************************
-
+call kdtree2_destroy(tree)
 deallocate ( AS,BODYS, XS, VS, RADIUS , NAME, KSTAR, ZLMSTY, ASS, BODYSS, XSS, VSS,&
            & mydata, list_neighbor_idx, list_neighbor_dis, r )
 deallocate (irho, rho, rho2)
@@ -815,16 +835,23 @@ out_str = " "
   end function sweep_blanks
 
   
-  subroutine get_model_name ( arg1, arg2 )
+  subroutine get_model_name ( arg1, arg2, res_init_ntot, res_mtot0 )
   implicit none
   integer::i
   character(len=100) :: arg1
   character(len=40) :: arg2
+  character(len=10) :: arg3, arg4
+  integer :: res_init_ntot
+  real*8 :: res_mtot0
           
   
 	call getarg(1, arg1)
 	call getarg(2, arg2)
-! 	write (*,*) arg1, arg2
+	call getarg(3, arg3)
+	call getarg(4, arg4)
+	read(arg3,*) res_init_ntot ! Converts arg3 to integer
+	read(arg4,*) res_mtot0 ! Convert arg4 to double precision
+	write (*,*) arg3, arg4, res_mtot0
   
   end subroutine get_model_name
   
