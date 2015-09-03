@@ -3,12 +3,12 @@
  Author: S.Mohammad Hoseini Rad  
  smhr313@gmail.com  
  Nov 2012, IASBS, Zanjan  
- Last modification: 17 February 2015 / 28 Bahman 1393 
-## Usage 
+ Last modification: 3 September 2015 / 12 Shahrivar 1394
+## Compile:   
 ```sh
 $ compile.sh
 ```
-Usage example:  
+## Usage example:
 Common run:  
 ```sh
 $ read-nbody-st.exe OUT3 my_simualtion 0 0
