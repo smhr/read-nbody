@@ -85,6 +85,7 @@ real*8,dimension(:,:),allocatable::del_r, del_v2, nei_BODYS, L2
 real*8,dimension(:,:),allocatable::idel_r, idel_v2, inei_bodys, iL2
 integer*8,dimension(:,:),allocatable::nei_NAME, inei_NAME
 integer::nid, find_binary, Nbin
+real*8::binary_energy_criterion
 ! *****************************************
 real*8::Mstar, Tstar, Rstar, Vstar
 real,parameter::G = 0.0043009211 ! In pc*km^2/s^2*M_sun
@@ -92,6 +93,7 @@ real,parameter::AU = 206264.806 ! pc to AU
 ! ******************************************
 integer:: res_INIT_NTOT
 real*8:: res_mtot0
+! ******************************************
 
  call cpu_time(start)
 
@@ -117,10 +119,11 @@ res_mtot0 = 0.
  diss_check = 1		! 1: Check dissolution of cluster; 0: No check.
  Ndiss = 0		! By reaching to this fraction of initial number of stars, the cluster is considered as a dissolved cluster; 0: Suppress this option.
  Mdiss = 0.001		! By reaching to this fraction of initial mass, the cluster is considered as a dissolved cluster; 0: Suppress this option.
- major_output = 1 
+ major_output = 0 
 ! Please note just use one of Ndiss or Mdiss options.
 !  model_name = 'N7500d8.5Rh3nei5_in_Rt'
 find_binary = 1 ! 0: Skip to find binary; 1: Find binaries.
+binary_energy_criterion = -100.
  
  ! ********* Input & Output files. *********
  ! *****************************************
@@ -144,7 +147,7 @@ find_binary = 1 ! 0: Skip to find binary; 1: Find binaries.
  endif
 ! ******************************************
 write(2,*) "    T_NB    T_Myr   N        M      M_ratio    Rh       Rt       Rc     Rc_O_Rh     RC    Rh_O_Rt   fbin0    fbint"
-write(7,*)" T(NBODY)  Time(Myr)   LR_0.01  LR_0.05  LR_0.50  LR_0.75  LR_0.95    Rt      Rc     Rc/Rh    RC    Rh/Rt"
+write(7,*)" T(NBODY) Time(Myr) LR_0.01   LR_0.05   LR_0.50  LR_0.75   LR_0.95     Rt         Rc       Rc/Rh      RC      Rh/Rt"
 ! write(2,*) "      T(NBODY)   T(Myr)   NTOT(in Rt)    MTOT(in Rt)       Rh            Rt"
 
 ! ************ Read in loop ****************
@@ -690,7 +693,7 @@ do i = 1, NTOT
 ! 			& nei_BODYS(i ,ll), ecc, a*AU, del_r(i, ll)*AU,&
 ! 			& list_neighbor_dis (i,ll)*AU*Rstar, Ebin
 
-		if ( Ebin < 0 ) then
+		if ( Ebin < binary_energy_criterion ) then
 			if ( NAME(i) == nei_NAME(i, ll) ) cycle
 		!	write (*,'(a15, 2i8, 6f12.2)')"binary", name(i), nei_NAME(i ,ll), BODYS(i),&
 		!	& nei_BODYS(i ,ll), ecc, a*AU, del_r(i, ll)*AU,	Ebin
@@ -767,8 +770,8 @@ endif !End of major_output loop
 	endif
 
 ! Write to radii file.
- write(7,'(2f9.2, 9f10.5)') AS(1), T6, ( LR(i),i=1,5 ), rt, rc, rc/LR(3), AS(13)*Rstar, LR(3)/rt
-
+ write(7,'(2f9.2, 10f10.5)') AS(1), T6, ( LR(i),i=1,5 ), rt, rc, rc/LR(3), AS(13)*Rstar, LR(3)/rt
+ FLUSH(7)
 !************************************
 call kdtree2_destroy(tree)
 deallocate ( AS,BODYS, XS, VS, RADIUS , NAME, KSTAR, ZLMSTY, ASS, BODYSS, XSS, VSS,&
