@@ -63,3 +63,4 @@ It Also prevent neighbor arrays and kdtree2 pointers to be allocated. So if you 
 17 February 2015 / 28 Bahman 1393: "Add call kdtree2_destroy(tree)".
 
 3 September 2015 / 12 Shahrivar 1394: Add two input arguments "res_INIT_NTOT, res_mtot0" to deal with restarted simulations.
+20 January 2016 / 30 Dey 1394: Correct ecc2 formula
