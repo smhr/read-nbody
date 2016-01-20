@@ -676,13 +676,9 @@ do i = 1, NTOT
 		& + 0.5 *  BODYS(i) * nei_BODYS(i, ll) / ( BODYS(i) + nei_BODYS(i ,ll) )&
 		& * del_v2(i, ll)
 	
-
-
 		a = - 0.5 * G * BODYS(i) * nei_BODYS(i, ll) / Ebin
 
-               
-		ecc2 = ( 1 - ( BODYS(i) + nei_BODYS(i, ll) ) * L2(i, ll) / ( G * a *   BODYS(i) * BODYS(i) &
-			& * nei_BODYS(i, ll) * nei_BODYS(i, ll) ) )
+                ecc2 = 1. - L2(i, ll) / ( G * a * ( BODYS(i) + nei_BODYS(i, ll) ) )
                 if ( ecc2 >= 0 ) then
                         ecc = sqrt(ecc2)
                 else
@@ -698,7 +694,7 @@ do i = 1, NTOT
 		!	write (*,'(a15, 2i8, 6f12.2)')"binary", name(i), nei_NAME(i ,ll), BODYS(i),&
 		!	& nei_BODYS(i ,ll), ecc, a*AU, del_r(i, ll)*AU,	Ebin
                         Nbin = Nbin + 1
-			write (10,'(2f10.3, 2i10, 6f12.2)') AS(1), T6, name(i), nei_NAME(i ,ll), BODYS(i),&
+			write (10,'(2f10.3, 2i10, 6f12.3)') AS(1), T6, name(i), nei_NAME(i ,ll), BODYS(i),&
 			& nei_BODYS(i ,ll), ecc, a*AU, del_r(i, ll)*AU, Ebin
 	      endif
 	enddo
@@ -771,7 +767,10 @@ endif !End of major_output loop
 
 ! Write to radii file.
  write(7,'(2f9.2, 10f10.5)') AS(1), T6, ( LR(i),i=1,5 ), rt, rc, rc/LR(3), AS(13)*Rstar, LR(3)/rt
+ FLUSH(2)
+ FLUSH(3)
  FLUSH(7)
+ FLUSH(10)
 !************************************
 call kdtree2_destroy(tree)
 deallocate ( AS,BODYS, XS, VS, RADIUS , NAME, KSTAR, ZLMSTY, ASS, BODYSS, XSS, VSS,&
