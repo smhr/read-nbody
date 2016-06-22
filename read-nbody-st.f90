@@ -168,9 +168,9 @@ if ( code == 1 ) then
 		call termination ( IO, err)
 	endif
 else if ( code == 2 ) then
-	read(1, iostat=IO)iiNTOT, MODEL, NRUN, NK
+	read(1, iostat=IO)iiNTOT, MODEL, NRUN, NK, N
 	if ( loop_index == 0 ) INIT_NTOT = iiNTOT
-	if (debug == 1 ) write (*,'(5i10)') iiNTOT, MODEL, NRUN, NK
+	if (debug == 1 ) write (*,'(5i10)') iiNTOT, MODEL, NRUN, NK, N
 	if ( IO /= 0 ) then
 		call termination ( IO, err)
 	endif
@@ -325,7 +325,8 @@ allocate(iRADIUS(iNTOT)); allocate(iNAME(iNTOT)); allocate(iKSTAR(iNTOT)); alloc
 if (debug == 1 ) write (*,*)"Allocating test_name."
   k = 0
   do i = 1, iiNTOT
- 		if ( iiNAME(i) >= 1 .AND. iiNAME(i) <= INIT_NTOT .AND. iiBODYS(i) > 0 ) then
+! 		if ( iiNAME(i) >= 1 .AND. iiNAME(i) <= INIT_NTOT .AND. iiBODYS(i) > 0 ) then
+ 		if ( iiNAME(i) >= 1 .AND. iiNAME(i) <= N .AND. iiBODYS(i) > 0 ) then
 ! 			ir(i) = sqrt( iXS(1,i)*iXS(1,i) + iXS(2,i)*iXS(2,i) + iXS(3,i)*iXS(3,i) )
 ! 			if ( code == 1 ) then
 ! 				if ( ir(i) <= 4*rt ) then
