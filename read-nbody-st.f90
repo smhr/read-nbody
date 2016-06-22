@@ -115,7 +115,7 @@ res_mtot0 = 0.
  code = 2  	! 1:NBODY6 custom, 2: NBODY6
  tscreen = 1		! Time interval of output on screen & harddisk. (NBODY6 custom: Myr, NBODY6: N-body unit)
  tout = 1		! Time interval of output on screen & harddisk. It Also prevent neighbor arrays and kdtree2 pointers to be allocated. So if you have many time snapshots, by increasing 'tout', you can pass the memory overflow problem. (NBODY6 custom: Myr, NBODY6: N-body unit)
- debug = 0		! 1: Debug mode.
+ debug = 1		! 1: Debug mode.
  diss_check = 1		! 1: Check dissolution of cluster; 0: No check.
  Ndiss = 0		! By reaching to this fraction of initial number of stars, the cluster is considered as a dissolved cluster; 0: Suppress this option.
  Mdiss = 0.001		! By reaching to this fraction of initial mass, the cluster is considered as a dissolved cluster; 0: Suppress this option.
@@ -123,7 +123,7 @@ res_mtot0 = 0.
 ! Please note just use one of Ndiss or Mdiss options.
 !  model_name = 'N7500d8.5Rh3nei5_in_Rt'
 find_binary = 1 ! 0: Skip to find binary; 1: Find binaries.
-binary_energy_criterion = -100.
+binary_energy_criterion = -0.001
  
  ! ********* Input & Output files. *********
  ! *****************************************
@@ -310,12 +310,15 @@ i = 0; k = 0; iNTOT = 0
 if (debug == 1 ) write (*,*) "Allocating ir Array in test_name."
 
 do i = 1, iiNTOT
-if (iiname(i)==0) print*,"iiname=",iiname(i),"for i =", i
- 		if ( iiNAME(i) >= 1 .AND. iiNAME(i) <= INIT_NTOT .AND. iiBODYS(i) > 0 ) then
+if (debug == 1 ) then
+!   if (iiname(i)<=0 .or. iiname(i)> INIT_NTOT) print*,"iiname=",iiname(i),"for i =", i
+endif
+! 		if ( iiNAME(i) >= 1 .AND. iiNAME(i) <= INIT_NTOT .AND. iiBODYS(i) > 0 ) then
+ 		if ( iiNAME(i) >= 1 .AND. iiNAME(i) <= N .AND. iiBODYS(i) > 0 ) then
 			k = k + 1
 		endif
 enddo
-
+  print*,"iNTOT =", k
   iNTOT = k
 
 allocate (iBODYS(iNTOT)); allocate(iXS(3,iNTOT)); allocate(iVS(3,iNTOT))
@@ -354,7 +357,7 @@ deallocate  ( iiBODYS, iiXS, iiVS, iiRADIUS , iiNAME, iiKSTAR, iiZLMSTY )
 ! 	call neighbor_find ( n_neighbor, iNTOT, iXS, list_neighbor_idx, list_neighbor_dis ) ! finding all neighbors and their distances for all stars and saving them in list_neighbor_idx and list_neighbor_dis arrays correspondingly.
 !************************************
 
-if (debug == 1 ) write (*,*) "Finding neighbor."
+if (debug == 1 ) write (*,*) "Finding neighbor with iNTOT = ", iNTOT
 allocate(mydata(3,iNTOT))
 mydata = iXS ! putting x,y and z of all stars in mydata array to change them to single precision.
 tree => kdtree2_create(mydata,rearrange=.true.,sort=.true.)
@@ -709,8 +712,9 @@ if (debug == 1 ) then
 endif
 endif !  End of main binary finding condition.
 
-fbin0 = ( Nbin * 2. ) / INIT_NTOT
-fbint =  ( Nbin * 2. ) / NTOT
+!fbin0 = ( Nbin * 2. ) / INIT_NTOT
+fbin0 = float( Nbin ) / N
+fbint =  float( Nbin ) / NTOT
 !************************************
 !
 ! 	call writeout ( code, output_file, mtot, LR, tscreen, NTOT, NK, AS, BODYS, XS, VS, RADIUS, NAME, KSTAR, ZLMSTY ) ! Writing out outputs.
