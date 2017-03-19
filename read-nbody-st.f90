@@ -103,7 +103,7 @@ real*8:: res_mtot0
 IO = 0
 err = 0
 status = 0
-n_neighbor = 5 ! Number of nearest neighbors in Casterano & Hut (1985) and Aarseth (2001) method.
+n_neighbor = 6 ! Number of nearest neighbors in Casterano & Hut (1985) and Aarseth (2001) method.
 loop_index = 0
 INIT_NTOT = 0; iNTOT = 0; imtot = 0
 rstep = 0.01 ! Bin length in astronomical unit for calculating lagrangian radii.
@@ -119,7 +119,7 @@ res_mtot0 = 0.
  diss_check = 1		! 1: Check dissolution of cluster; 0: No check.
  Ndiss = 0		! By reaching to this fraction of initial number of stars, the cluster is considered as a dissolved cluster; 0: Suppress this option.
  Mdiss = 0.001		! By reaching to this fraction of initial mass, the cluster is considered as a dissolved cluster; 0: Suppress this option.
- major_output = 0 
+ major_output = 1 
 ! Please note just use one of Ndiss or Mdiss options.
 !  model_name = 'N7500d8.5Rh3nei5_in_Rt'
 find_binary = 1 ! 0: Skip to find binary; 1: Find binaries.
@@ -147,7 +147,7 @@ binary_energy_criterion = -0.001
  endif
 ! ******************************************
 write(2,*) "    T_NB    T_Myr   N        M      M_ratio    Rh       Rt       Rc     Rc_O_Rh     RC    Rh_O_Rt   fbin0    fbint"
-write(7,*)" T(NBODY) Time(Myr) LR_0.01   LR_0.05   LR_0.50  LR_0.75   LR_0.95     Rt         Rc       Rc/Rh      RC      Rh/Rt"
+write(7,*)" T(NBODY) Time(Myr) LR_0.01   LR_0.10   LR_0.30  LR_0.50   LR_0.70     Rt         Rc       Rc/Rh      RC      Rh/Rt"
 ! write(2,*) "      T(NBODY)   T(Myr)   NTOT(in Rt)    MTOT(in Rt)       Rh            Rt"
 
 ! ************ Read in loop ****************
@@ -168,7 +168,7 @@ if ( code == 1 ) then
 		call termination ( IO, err)
 	endif
 else if ( code == 2 ) then
-	read(1, iostat=IO)iiNTOT, MODEL, NRUN, NK, N
+	read(1, iostat=IO)iiNTOT, MODEL, NRUN, NK
 	if ( loop_index == 0 ) INIT_NTOT = iiNTOT
 	if (debug == 1 ) write (*,'(5i10)') iiNTOT, MODEL, NRUN, NK, N
 	if ( IO /= 0 ) then
@@ -313,8 +313,8 @@ do i = 1, iiNTOT
 if (debug == 1 ) then
 !   if (iiname(i)<=0 .or. iiname(i)> INIT_NTOT) print*,"iiname=",iiname(i),"for i =", i
 endif
-! 		if ( iiNAME(i) >= 1 .AND. iiNAME(i) <= INIT_NTOT .AND. iiBODYS(i) > 0 ) then
- 		if ( iiNAME(i) >= 1 .AND. iiNAME(i) <= N .AND. iiBODYS(i) > 0 ) then
+ 		if ( iiNAME(i) >= 1 .AND. iiNAME(i) <= INIT_NTOT .AND. iiBODYS(i) > 0 ) then
+! 		if ( iiNAME(i) >= 1 .AND. iiNAME(i) <= N .AND. iiBODYS(i) > 0 ) then
 			k = k + 1
 		endif
 enddo
@@ -328,8 +328,8 @@ allocate(iRADIUS(iNTOT)); allocate(iNAME(iNTOT)); allocate(iKSTAR(iNTOT)); alloc
 if (debug == 1 ) write (*,*)"Allocating test_name."
   k = 0
   do i = 1, iiNTOT
-! 		if ( iiNAME(i) >= 1 .AND. iiNAME(i) <= INIT_NTOT .AND. iiBODYS(i) > 0 ) then
- 		if ( iiNAME(i) >= 1 .AND. iiNAME(i) <= N .AND. iiBODYS(i) > 0 ) then
+ 		if ( iiNAME(i) >= 1 .AND. iiNAME(i) <= INIT_NTOT .AND. iiBODYS(i) > 0 ) then
+! 		if ( iiNAME(i) >= 1 .AND. iiNAME(i) <= N .AND. iiBODYS(i) > 0 ) then
 ! 			ir(i) = sqrt( iXS(1,i)*iXS(1,i) + iXS(2,i)*iXS(2,i) + iXS(3,i)*iXS(3,i) )
 ! 			if ( code == 1 ) then
 ! 				if ( ir(i) <= 4*rt ) then
@@ -609,16 +609,16 @@ do while ( check /= 6 )
 			if  ( mtemp >= mtot * 0.01 .AND. check == 1)  then
 				LR(1) = rtemp;! print*,"LR1 = ",LR(1)
 				check = 2; exit
-			elseif ( mtemp >= ( mtot * 0.05 ) .AND. check == 2 ) then
+			elseif ( mtemp >= ( mtot * 0.10 ) .AND. check == 2 ) then
 				LR(2) = rtemp;! print*,"LR5 = ",LR(2)
 				check = 3; exit
-			elseif ( mtemp >= ( mtot * 0.50 ) .AND. check == 3 ) then
+			elseif ( mtemp >= ( mtot * 0.30 ) .AND. check == 3 ) then
 				LR(3) = rtemp;! print*,"LR50 = ",LR(3)
 				check = 4; exit
-			elseif ( mtemp >= ( mtot * 0.75 ) .AND. check == 4 ) then
+			elseif ( mtemp >= ( mtot * 0.50 ) .AND. check == 4 ) then
 				LR(4) = rtemp;! print*,"LR75 = ",LR(4)
 				check = 5; exit
-			elseif ( mtemp >= mtot * 0.95 .AND. check == 5 ) then
+			elseif ( mtemp >= mtot * 0.70 .AND. check == 5 ) then
 				LR(5) = rtemp;! print*,"LR95 = ",LR(5)
 				check = 6; exit
 			endif
@@ -744,10 +744,10 @@ output_file = sweep_blanks(output_file)
 open(4,file=output_file)
 do i=1,NTOT
 	if ( code == 1 ) then
-		write(4,'(i6, f13.9, 6f13.6 , i3, 2f15.5)')NAME(i), BODYS(i),(XS(K,i),K=1,3),&
+		write(4,'(i7, f14.9, 6f13.6 , i3, 2f15.5)')NAME(i), BODYS(i),(XS(K,i),K=1,3),&
 		&(VS(K,i),K=1,3), KSTAR(i), ZLMSTY(i), RADIUS(i)
 	elseif ( code == 2 ) then
-		write(4,'(i6, f13.9, 6f13.6 )')NAME(i), BODYS(i),(XS(K,i),K=1,3),&
+		write(4,'(i7, f14.9, 6f13.6 )')NAME(i), BODYS(i),(XS(K,i),K=1,3),&
 		&(VS(K,i),K=1,3)
 	endif
 enddo
@@ -756,13 +756,13 @@ endif !End of major_output loop
 
 ! Write to "overview.txt" file.
 		write(2,'(2f8.1, i7, f11.2, f8.3, 8f9.3)')AS(1), T6, NTOT, mtot, mtot/mtot0,&
-			& LR(3), rt, rc, rc/LR(3), AS(13)*Rstar, LR(3)/rt, fbin0, fbint
+			& LR(4), rt, rc, rc/LR(4), AS(13)*Rstar, LR(4)/rt, fbin0, fbint
 		if ( mod (int(nint(T6)),tscreen) == 0 ) then
 			write(*,*)
 			write(*,*) "    T_NB    T_Myr   N        M      M_ratio    Rh       Rt       Rc&
                         &     Rc_O_Rh     RC    Rh_O_Rt   fbin0    fbint"
 			write(*,'(2f8.1, i7, f11.2, f8.3, 8f9.3)')AS(1), T6, NTOT, mtot, mtot/mtot0,&
-			& LR(3), rt, rc, rc/LR(3), AS(13)*Rstar, LR(3)/rt, fbin0, fbint
+			& LR(4), rt, rc, rc/LR(4), AS(13)*Rstar, LR(4)/rt, fbin0, fbint
 		endif
 ! 	
 	if (debug == 1 ) then
