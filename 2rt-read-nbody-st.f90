@@ -119,7 +119,7 @@ res_mtot0 = 0.
  diss_check = 1		! 1: Check dissolution of cluster; 0: No check.
  Ndiss = 0		! By reaching to this fraction of initial number of stars, the cluster is considered as a dissolved cluster; 0: Suppress this option.
  Mdiss = 0.001		! By reaching to this fraction of initial mass, the cluster is considered as a dissolved cluster; 0: Suppress this option.
- major_output = 0 
+ major_output = 1 
 ! Please note just use one of Ndiss or Mdiss options.
 !  model_name = 'N7500d8.5Rh3nei5_in_Rt'
 find_binary = 1 ! 0: Skip to find binary; 1: Find binaries.
@@ -132,10 +132,10 @@ binary_energy_criterion = -0.001
 !  call system ( dir_command )
 !  input_file='N7500.POS' ! Input file.
  open(1,file=input_file, form='unformatted')
- open(2,file='overview.txt') ! This file includes some cluster characteristics.
- open(3,file='density_center.txt') ! This file includes density center coordinate of cluster during evolution.
- open(7,file='radii.txt') ! This file includes Lagrangian radii.
- open(10,file='binary.txt')
+ open(2,file='2rt_overview.txt') ! This file includes some cluster characteristics.
+ open(3,file='2rt_density_center.txt') ! This file includes density center coordinate of cluster during evolution.
+ open(7,file='2rt_radii.txt') ! This file includes Lagrangian radii.
+ open(10,file='2rt_binary.txt')
 ! ******************************************
  dir_command = 'mkdir '// model_name
  call system ( dir_command )
@@ -488,7 +488,7 @@ if ( AS(1) > 0.0001) then ! This condition is for tidal radius to be correct at 
 !  		if ( iNAME(i) >= 1) then
 			ir(i) = sqrt( iXS(1,i)*iXS(1,i) + iXS(2,i)*iXS(2,i) + iXS(3,i)*iXS(3,i) )
 ! print*,ir(i)
-			if ( ir(i) <= rt ) then
+			if ( ir(i) <= 2.0*rt ) then
 				k = k + 1
 			endif
 			
@@ -534,7 +534,7 @@ if ( AS(1) > 0.0001) then
 			ir(i) = sqrt( iXS(1,i)*iXS(1,i) + iXS(2,i)*iXS(2,i) + iXS(3,i)*iXS(3,i) )
 ! print*,ixs(1,i)
 ! 			if ( code == 1 ) then
-				if ( ir(i) <= rt ) then
+				if ( ir(i) <= 2.0*rt ) then
 					k = k + 1
 					r(k) = ir(i)
 					BODYS(k) = iBODYS(i)
