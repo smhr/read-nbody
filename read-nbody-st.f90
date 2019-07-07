@@ -164,6 +164,7 @@ DO WHILE ( .TRUE. ) ! Repeating the loop until the end of input file.
 if ( code == 1 ) then
 	read(1, iostat=IO)iiNTOT,NK,N
 	if (debug == 1 ) write (*,'(3i10)') iiNTOT,NK,N
+	if ( loop_index == 0 ) INIT_NTOT = iiNTOT
 	if ( IO /= 0 ) then
 		call termination ( IO, err)
 	endif
@@ -308,6 +309,7 @@ i = 0; k = 0; iNTOT = 0
 !print*,intot,ntot,"intot,ntot"
 
 if (debug == 1 ) write (*,*) "Allocating ir Array in test_name."
+if (debug == 1 ) write (*,*) "INIT_NTOT = ", INIT_NTOT
 
 do i = 1, iiNTOT
 if (debug == 1 ) then
