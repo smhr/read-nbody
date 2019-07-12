@@ -11,11 +11,11 @@ $ compile.sh
 ## Usage example:
 Common run:  
 ```sh
-$ read-nbody-st.exe OUT3 my_simualtion 0 0
+$ read-nbody-st.exe OUT3 my_simulation 0 0
 ```
 Restarted run: 
 ```sh
-$ read-nbody-st.exe OUT3 my_simualtion 150000 100000.0
+$ read-nbody-st.exe OUT3 my_simulation 150000 100000.0
 ```
 ===============================
 

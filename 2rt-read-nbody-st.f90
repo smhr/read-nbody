@@ -3,7 +3,7 @@
 ! Author: S.Mohammad Hoseini Rad
 ! smhr313@gmail.com
 ! Nov 2012, IASBS, Zanjan
-! Last modification: 3 September 2015 / 12 Shahrivar 1394
+! Last modification: 7 July 2019 / 16 Tir 1398
 !**************************************************************
 !     This program is free software; you can redistribute it and/or modify
 !     it under the terms of the GNU General Public License as published by
@@ -112,7 +112,7 @@ res_mtot0 = 0.
 
 ! ************ Code options ****************
 ! ******************************************
- code = 2  	! 1:NBODY6 custom, 2: NBODY6
+ code = 2  	! 1:NBODY6 custom, 2: NBODY6, 3: NBODY6 new custom version
  tscreen = 1		! Time interval of output on screen & harddisk. (NBODY6 custom: Myr, NBODY6: N-body unit)
  tout = 1		! Time interval of output on screen & harddisk. It Also prevent neighbor arrays and kdtree2 pointers to be allocated. So if you have many time snapshots, by increasing 'tout', you can pass the memory overflow problem. (NBODY6 custom: Myr, NBODY6: N-body unit)
  debug = 1		! 1: Debug mode.
@@ -161,7 +161,7 @@ DO WHILE ( .TRUE. ) ! Repeating the loop until the end of input file.
 
 ! *******************************************
 ! define_arrays_size ( code, input_file, loop_index, NTOT, MODEL, NRUN, NK, N, INIT_NTOT ) ! Read number of particles in each loop.
-if ( code == 1 ) then
+if ( code == 1 .or. code == 3) then
 	read(1, iostat=IO)iiNTOT,NK,N
 	if (debug == 1 ) write (*,'(3i10)') iiNTOT,NK,N
 	if ( loop_index == 0 ) INIT_NTOT = iiNTOT
@@ -180,7 +180,7 @@ if ( res_INIT_NTOT /= 0 ) then
         INIT_NTOT = res_INIT_NTOT
 endif
 ! *******************************************
-if ( code == 1 ) then
+if ( code == 1 .or. code == 3) then
 	if ( mod (int(nint(AS(10))),tout) /= 0 ) cycle
 elseif ( code == 2 ) then
 ! print*,"AS(1)=",AS(1)
@@ -238,17 +238,27 @@ if (debug == 1 ) print*,"Allocating readin arrays."
 iiRADIUS = 0 ;iiZLMSTY = 0; iiKSTAR = 0
 rt = 0; T6 = 0; Mstar =0; Rstar = 0; Vstar = 0; Tstar = 0
 
-if ( code == 1 ) then
+if ( code == 1 .or. code == 3) then
 
 	read(1, iostat=IO)(AS(K),K=1,NK),(iiBODYS(J),J=1,iiNTOT),((iiXS(K,J),K=1,3),J=1,iiNTOT),((iiVS(K,J),K=1,3),J=1,iiNTOT),&
 		(iiRADIUS(J),J=1,iiNTOT),(iiNAME(J),J=1,iiNTOT),&
 		(iiKSTAR(J),J=1,iiNTOT),(iiZLMSTY(J),J=1,iiNTOT)
-	rt = AS(25) ! Tidal Radius.
-	T6 = AS(10) ! Astrophysical time (Myr).
-	Mstar = AS(4)
-	Rstar = AS(3)
-	Vstar = AS(12)
+        
 	if (debug == 1 ) write (*,*)(k,AS(K),K=1,NK)
+	if ( code == 1 ) then
+	    rt = AS(25) ! Tidal Radius.
+	    T6 = AS(10) ! Astrophysical time (Myr).
+	    Mstar = AS(4)
+	    Rstar = AS(3)
+	    Vstar = AS(12)
+        else if ( code == 3 ) then ! new nbody6 version
+            rt = AS(5) ! Tidal Radius.
+	    Tstar = AS(11)
+	    T6 = AS(1) * Tstar ! Astrophysical time (Myr), Nbody time * TSCALE
+	    Mstar = AS(4)
+	    Rstar = AS(3)
+	    Vstar = AS(12)
+        endif
 	if ( IO /= 0 ) then
 		err = 1
 		call termination ( IO, err)
@@ -285,7 +295,7 @@ else if ( code == 2 ) then
 endif
 !************************************
 ! Check "dtout" option:
-if ( code == 1 ) then
+if ( code == 1 .or. code == 3 ) then
 	if ( mod (int(nint(AS(10))),tout) /= 0 )then
 		deallocate (AS, iiBODYS, iiXS, iiVS, iiRADIUS, iiNAME, iiKSTAR, iiZLMSTY)
 		deallocate (ASS, BODYSS, XSS, VSS)
@@ -745,7 +755,7 @@ output_file = trim(model_name) // '/' // trim(output_file)
 output_file = sweep_blanks(output_file)
 open(4,file=output_file)
 do i=1,NTOT
-	if ( code == 1 ) then
+	if ( code == 1 .or. code == 3) then
 		write(4,'(i7, f14.9, 6f13.6 , i3, 2f15.5)')NAME(i), BODYS(i),(XS(K,i),K=1,3),&
 		&(VS(K,i),K=1,3), KSTAR(i), ZLMSTY(i), RADIUS(i)
 	elseif ( code == 2 ) then
