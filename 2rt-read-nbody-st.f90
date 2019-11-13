@@ -107,7 +107,7 @@ status = 0
 n_neighbor = 6 ! Number of nearest neighbors in Casterano & Hut (1985) and Aarseth (2001) method.
 loop_index = 0
 INIT_NTOT = 0; iNTOT = 0; imtot = 0
-rstep = 0.01 ! Bin length in astronomical unit for calculating lagrangian radii.
+rstep = 0.01 ! Bin length in pc for calculating lagrangian radii.
 res_INIT_NTOT = 0
 res_mtot0 = 0.
 
