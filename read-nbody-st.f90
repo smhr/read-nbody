@@ -30,7 +30,8 @@ implicit none
 real*8::start, finish ! For cpu_time subroutine.
 integer*4::i,j,l,k,ll ! loop counter variables.
 integer*4::IO,code, err, debug
-integer::tscreen, tout ! Frequency of output on screen, on harddisk.
+integer::tscreen ! Frequency of output on screen.
+integer::tout ! Frequency of output on harddisk.
 integer,dimension(13)::buff ! This related to measuring size of input file.
 integer*4::status ! This is related to measuring size of input file.
 integer::loop_index
@@ -119,12 +120,12 @@ res_mtot0 = 0.
  diss_check = 1		! 1: Check dissolution of cluster; 0: No check.
  Ndiss = 0		! By reaching to this fraction of initial number of stars, the cluster is considered as a dissolved cluster; 0: Suppress this option.
  Mdiss = 0.001		! By reaching to this fraction of initial mass, the cluster is considered as a dissolved cluster; 0: Suppress this option.
- major_output = 0 
+ major_output = 0
 ! Please note just use one of Ndiss or Mdiss options.
 !  model_name = 'N7500d8.5Rh3nei5_in_Rt'
 find_binary = 1 ! 0: Skip to find binary; 1: Find binaries.
 binary_energy_criterion = -0.001
- 
+
  ! ********* Input & Output files. *********
  ! *****************************************
  call get_model_name ( input_file, model_name, res_INIT_NTOT, res_mtot0 )
@@ -243,7 +244,7 @@ if ( code == 1 .or. code == 3) then
 	read(1, iostat=IO)(AS(K),K=1,NK),(iiBODYS(J),J=1,iiNTOT),((iiXS(K,J),K=1,3),J=1,iiNTOT),((iiVS(K,J),K=1,3),J=1,iiNTOT),&
 		(iiRADIUS(J),J=1,iiNTOT),(iiNAME(J),J=1,iiNTOT),&
 		(iiKSTAR(J),J=1,iiNTOT),(iiZLMSTY(J),J=1,iiNTOT)
-        
+
 	if (debug == 1 ) write (*,*)(k,AS(K),K=1,NK)
 	if ( code == 1 ) then
 	    rt = AS(25) ! Tidal Radius.
@@ -381,7 +382,7 @@ do i=1,iNTOT ! Find star neighbors and their distances to the ith star in XSt ar
 	allocate (results(n_neighbor + 1)) ! The results(1) is associated with the ith star. The results(2..n_neighbor+1) are associated with n_neighbor nearest neighbors. So for 6 nearest neighbors, size of results array must be 7.
 
 	call kdtree2_n_nearest_around_point(tree,idxin=i,nn=n_neighbor + 1,correltime=0,results=results)
-	
+
 	do ll=1,n_neighbor + 1
 
 		list_neighbor_idx (i,ll) = results (ll)%idx
@@ -438,7 +439,7 @@ do i =1, iNTOT
 
 ! 		if ( iBODYS(i) > 0 .AND. iNAME(i) >= 1 .AND. iNAME(i) <= INIT_NTOT ) then
 
-		inei_BODYS(i,ll) = iBODYS(nid) 
+		inei_BODYS(i,ll) = iBODYS(nid)
 		inei_NAME(i,ll) = iNAME(nid)
 ! print*,"* ",ixs(1,i),ixs(2,i),ixs(3,i)
 		rx = iXS(1,i) - iXS (1,nid)
@@ -457,14 +458,14 @@ do i =1, iNTOT
 		Ly = rz*vx - rx*vz
 		Lz = rx*vy - ry*vx
 		iL2(i,ll) = lx*lx + ly*ly + lz*lz
-		
-		
+
+
 ! 		if (iname(i)==80373)	write (*,'(a15, 4i8, 4f12.2)')"#######", i, nid, iname(i), inei_NAME(i ,ll), iBODYS(i),&
 ! & inei_BODYS(i ,ll), idel_r(i, ll)*AU*Rstar, list_neighbor_dis (i,ll)*AU*Rstar
 
-		
+
 ! 		endif
-		
+
 	enddo
 enddo
 ! **********************************
@@ -503,7 +504,7 @@ if ( AS(1) > 0.0001) then ! This condition is for tidal radius to be correct at 
 			if ( ir(i) <= rt ) then
 				k = k + 1
 			endif
-			
+
 !  		endif
   enddo
 
@@ -559,7 +560,7 @@ if ( AS(1) > 0.0001) then
 					ZLMSTY(k) = iZLMSTY(i)
 					rho(k) = irho(i)
 					ll = 0
-						do ll = 2, n_neighbor + 1 
+						do ll = 2, n_neighbor + 1
 							del_r(k, ll) = idel_r(i, ll)
 							del_v2(k, ll) = idel_v2(i, ll)
 							L2(k, ll) = iL2(i, ll)
@@ -600,7 +601,7 @@ do i = 1, NTOT ! ************ Converting from Nbody units to Astrophysical units
 ! print*,r(i)
 	rho(i) = rho(i) * Mstar / Rstar / Rstar / Rstar
 	do k = 1, 3 ! Converting coordinates to pc & velocities to km/s.
-		XS(k,i)=XS(k,i)*Rstar; VS(k,i)=VS(K,i)*Vstar 
+		XS(k,i)=XS(k,i)*Rstar; VS(k,i)=VS(K,i)*Vstar
 ! print*,XS(k,i)
 	enddo
 enddo
@@ -617,7 +618,7 @@ do while ( check /= 6 )
 ! print*, r(i), rtemp, Rstar
 		if ( r(i) <= rtemp ) then
 			mtemp = mtemp + BODYS(i)
-!  			print*,mtemp 
+!  			print*,mtemp
 			if  ( mtemp >= mtot * 0.01 .AND. check == 1)  then
 				LR(1) = rtemp;! print*,"LR1 = ",LR(1)
 				check = 2; exit
@@ -687,11 +688,11 @@ do i = 1, NTOT
 		L2(i, ll) = L2(i, ll) * Rstar * Vstar * Rstar * Vstar
 
 		! *******************************************
-	
+
 		Ebin = - ( G * BODYS(i) * nei_BODYS(i, ll) / del_r(i, ll) ) &
 		& + 0.5 *  BODYS(i) * nei_BODYS(i, ll) / ( BODYS(i) + nei_BODYS(i ,ll) )&
 		& * del_v2(i, ll)
-	
+
 		a = - 0.5 * G * BODYS(i) * nei_BODYS(i, ll) / Ebin
 
                 ecc2 = 1. - L2(i, ll) / ( G * a * ( BODYS(i) + nei_BODYS(i, ll) ) )
@@ -718,7 +719,7 @@ enddo
 
 Nbin = Nbin / 2  !Because each binary counted twice.
 
-if (debug == 1 ) then 
+if (debug == 1 ) then
         print*,Nbin, "binaries were found."
         write (*,*)"Done."
 endif
@@ -776,7 +777,7 @@ endif !End of major_output loop
 			write(*,'(2f8.1, i7, f11.2, f8.3, 8f9.3)')AS(1), T6, NTOT, mtot, mtot/mtot0,&
 			& LR(4), rt, rc, rc/LR(4), AS(13)*Rstar, LR(4)/rt, fbin0, fbint
 		endif
-! 	
+!
 	if (debug == 1 ) then
 	write (*,*)"Writing out arrays. Done."
 	print*,"*************************************************************"
@@ -853,7 +854,7 @@ out_str = " "
     end do
   end function sweep_blanks
 
-  
+
   subroutine get_model_name ( arg1, arg2, res_init_ntot, res_mtot0 )
   implicit none
   integer::i
@@ -862,8 +863,8 @@ out_str = " "
   character(len=10) :: arg3, arg4
   integer :: res_init_ntot
   real*8 :: res_mtot0
-          
-  
+
+
 	call getarg(1, arg1)
 	call getarg(2, arg2)
 	call getarg(3, arg3)
@@ -871,7 +872,7 @@ out_str = " "
 	read(arg3,*) res_init_ntot ! Converts arg3 to integer
 	read(arg4,*) res_mtot0 ! Convert arg4 to double precision
 	write (*,*) arg3, arg4, res_mtot0
-  
+
   end subroutine get_model_name
-  
+
  end program read_nbody
