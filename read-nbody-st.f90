@@ -36,6 +36,7 @@ program read_nbody
    integer*4::status ! This is related to measuring size of input file.
    integer::loop_index
    integer::INIT_NTOT
+   integer::INIT_NTAIL
 ! ******************************************
 ! NBODY6 outputs (here inputs). See output.f in Ncode directory of NBODY6,
 ! before removing stars with NAME < 1 and outside tidal rdius.
@@ -49,6 +50,11 @@ program read_nbody
    real*8,dimension(:),allocatable::iBODYS,iRADIUS,iZLMSTY
    real*8,dimension(:,:),allocatable::iXS,iVS
 ! ******************************************
+   integer*4::iNTAIL
+   integer,dimension(:),allocatable::iNAMEt
+   real*8,dimension(:),allocatable::iBODYSt
+   real*8,dimension(:,:),allocatable::iXSt,iVSt
+! ******************************************
 ! NBODY6 outputs (here inputs), after removing stars with NAME < 1 and outside tidal rdius.
    integer*4::NTOT,NK,N,MODEL,NRUN
    integer,dimension(:),allocatable::NAME,KSTAR
@@ -57,10 +63,18 @@ program read_nbody
    real*4,dimension(:,:),allocatable::XSS,VSS
    real*4,dimension(:),allocatable::BODYSS,ASS  ! For converting single precision to double precision ( if code = 2).
 ! ******************************************
+   integer*4::NTAIL
+   integer,dimension(:),allocatable::NAMEt
+   real*8,dimension(:),allocatable::ASt,BODYSt
+   real*8,dimension(:,:),allocatable::XSt,VSt
+   real*4,dimension(:,:),allocatable::XSSt,VSSt
+   real*4,dimension(:),allocatable::BODYSSt,ASSt  ! For converting single precision to double precision ( if code = 2).
+! ******************************************
    real*8::mtot, imtot, T6, mtot0
    integer,dimension(:,:),allocatable::list_neighbor_idx ! Neighbor index array.
    real,dimension(:,:),allocatable::list_neighbor_dis ! Neighbor distance array.
    character(len=100)::output_file, input_file, fprefix
+   character(len=100)::output_file_tail
    integer::n_neighbor ! Number of nearest neighbors in Casterano & Hut method.
    real*8,dimension(3)::Xd ! Density center coordinates.
    real*8,dimension(5)::LR ! Lagrangian radii array.
@@ -80,6 +94,7 @@ program read_nbody
    real::Ndiss, Mdiss
 ! ******************************************
    character(len=40)::model_name, dir_command
+   character(len=40)::model_name_tail
 ! ******************************************
    real*8::rx, ry, rz, vx, vy, vz, Ebin, a, ecc, ecc2, Lx, Ly, Lz, fbin0, fbint
    real*8,dimension(:,:),allocatable::del_r, del_v2, nei_BODYS, L2
@@ -113,14 +128,14 @@ program read_nbody
 
 ! ************ Code options ****************
 ! ******************************************
-   code = 3  	! 1:NBODY6 custom, 2: NBODY6, 3: NBODY6 new custom version
+   code = 2  	! 1:NBODY6 custom, 2: NBODY6, 3: NBODY6 new custom version
    tscreen = 1		! Time interval of output on screen & harddisk. (NBODY6 custom: Myr, NBODY6: N-body unit)
-   tout = 1		! Time interval of output on screen & harddisk. It Also prevent neighbor arrays and kdtree2 pointers to be allocated. So if you have many time snapshots, by increasing 'tout', you can pass the memory overflow problem. (NBODY6 custom: Myr, NBODY6: N-body unit)
+   tout = 100000		! Time interval of output on screen & harddisk. It Also prevent neighbor arrays and kdtree2 pointers to be allocated. So if you have many time snapshots, by increasing 'tout', you can pass the memory overflow problem. (NBODY6 custom: Myr, NBODY6: N-body unit)
    debug = 1		! 1: Debug mode.
    diss_check = 1		! 1: Check dissolution of cluster; 0: No check.
    Ndiss = 0		! By reaching to this fraction of initial number of stars, the cluster is considered as a dissolved cluster; 0: Suppress this option.
    Mdiss = 0.001		! By reaching to this fraction of initial mass, the cluster is considered as a dissolved cluster; 0: Suppress this option.
-   major_output = 0
+   major_output = 1
 ! Please note just use one of Ndiss or Mdiss options.
 !  model_name = 'N7500d8.5Rh3nei5_in_Rt'
    find_binary = 1 ! 0: Skip to find binary; 1: Find binaries.
@@ -128,7 +143,7 @@ program read_nbody
 
    ! ********* Input & Output files. *********
    ! *****************************************
-   call get_model_name ( input_file, model_name, res_INIT_NTOT, res_mtot0 )
+   call get_model_name ( input_file, res_INIT_NTOT, res_mtot0 )
 !  dir_command = 'rm -f ./binary.txt; touch ./binary.txt'
 !  call system ( dir_command )
 !  input_file='N7500.POS' ! Input file.
@@ -137,8 +152,12 @@ program read_nbody
    open(3,file='density_center.txt') ! This file includes density center coordinate of cluster during evolution.
    open(7,file='radii.txt') ! This file includes Lagrangian radii.
    open(10,file='binary.txt')
+   open(33,file='OUT33', form='unformatted')
 ! ******************************************
-   dir_command = 'mkdir '// model_name
+   dir_command = 'mkdir snapshot'
+   call system ( dir_command )
+   dir_command = 'mkdir tail'
+   print*,dir_command
    call system ( dir_command )
 
    call STAT (input_file, buff,status) ! Calculating size of input file.
@@ -170,25 +189,29 @@ program read_nbody
             call termination ( IO, err)
          endif
       else if ( code == 2 ) then
-         read(1, iostat=IO)iiNTOT, MODEL, NRUN, NK
+         read(1, iostat=IO)iiNTOT, MODEL, NRUN, NK, N
+         ! read(1, iostat=IO)iiNTOT, NK, N
          if ( loop_index == 0 ) INIT_NTOT = iiNTOT
          if (debug == 1 ) write (*,'(5i10)') iiNTOT, MODEL, NRUN, NK, N
          if ( IO /= 0 ) then
             call termination ( IO, err)
          endif
+         read(33, iostat=IO)iNTAIL
+         if ( loop_index == 0 ) INIT_NTAIL = iNTAIL
+         if (debug == 1 ) write (*,'(2i10)') iNTAIL
       endif
       if ( res_INIT_NTOT /= 0 ) then
          INIT_NTOT = res_INIT_NTOT
       endif
 ! *******************************************
-      if ( code == 1 .or. code == 3) then
-         if ( mod (int(nint(AS(10))),tout) /= 0 ) cycle
-      elseif ( code == 2 ) then
-! print*,"AS(1)=",AS(1)
-! bbb=mod (int(nint(AS(1))),tout)
-! 	print*, bbb
-         if ( mod (int(nint(AS(1))),tout) /= 0 ) cycle
-      endif
+!       if ( code == 1 .or. code == 3) then
+!          if ( mod (int(nint(AS(10))),tout) /= 0 ) cycle
+!       elseif ( code == 2 ) then
+! ! print*,"AS(1)=",AS(1)
+! ! bbb=mod (int(nint(AS(1))),tout)
+! ! 	print*, bbb
+!          if ( mod (int(nint(AS(1))),tout) /= 0 ) cycle
+!       endif
 ! *******************************************
 
 ! *******************************************
@@ -234,6 +257,10 @@ program read_nbody
 
       allocate (ASS(NK)); allocate (BODYSS(iiNTOT)); allocate(XSS(3,iiNTOT)); allocate(VSS(3,iiNTOT))
 
+      allocate (ASt(13)); allocate (iBODYSt(iNTAIL)); allocate(iXSt(3,iNTAIL)); allocate(iVSt(3,iNTAIL))
+      allocate (ASSt(13)); allocate (BODYSSt(iNTAIL)); allocate(XSSt(3,iNTAIL)); allocate(VSSt(3,iNTAIL))
+      allocate(iNAMEt(iNTAIL))
+
       if (debug == 1 ) print*,"Allocating readin arrays."
 
       iiRADIUS = 0 ;iiZLMSTY = 0; iiKSTAR = 0
@@ -269,10 +296,17 @@ program read_nbody
 
          read(1, iostat=IO)(ASS(K),K=1,NK),(BODYSS(J),J=1,iiNTOT),((XSS(K,J),K=1,3),J=1,iiNTOT),((VSS(K,J),K=1,3),J=1,iiNTOT),&
             (iiNAME(J),J=1,iiNTOT)
-         if (debug == 1 ) write (*,*)(k,ASS(K),K=1,NK)
+         if (debug == 1 ) write (*,'(i3,f14.9)')(k,ASS(K),K=1,NK)
+         ! Read tail data
+         read(33, iostat=IO)(ASSt(K),K=1,13),(BODYSSt(J),J=1,iNTAIL),((XSSt(K,J),K=1,3),J=1,iNTAIL),((VSSt(K,J),K=1,3),J=1,iNTAIL),&
+            (iNAMEt(J),J=1,iNTAIL)
+         if (debug == 1 ) write (*,'(i3,f14.9)')(k,ASSt(K),K=1,13)
 
          do J=1, NK	! Convert to double precision
             AS(J) = ASS(J)
+         enddo
+         do J=1, 13	! Convert to double precision
+            ASt(J) = ASSt(J)
          enddo
 
          do J=1, iiNTOT	! Convert to double precision
@@ -280,6 +314,13 @@ program read_nbody
             do K=1, 3
                iiXS(K,J) = XSS(K,J)
                iiVS(K,J) = VSS(K,J)
+            enddo
+         enddo
+         do J=1, iNTAIL	! Convert to double precision
+            iBODYSt(J) = BODYSSt(J)
+            do K=1, 3
+               iXSt(K,J) = XSSt(K,J)
+               iVSt(K,J) = VSSt(K,J)
             enddo
          enddo
          rt = AS(5) ! Tidal Radius.
@@ -294,21 +335,32 @@ program read_nbody
          endif
 
       endif
+      print*,"After converting to double precision"
+      do i=1,iNTAIL
+        if ( code == 2 ) then
+          write(*,'(i7, f14.9, 6f13.6 )')iNAMEt(i), iBODYSt(i),(iXSt(K,i),K=1,3),&
+          &(iVSt(K,i),K=1,3)
+        endif
+      enddo
 !************************************
-! Check "dtout" option:
-      if ( code == 1 .or. code == 3 ) then
-         if ( mod (int(nint(AS(10))),tout) /= 0 )then
-            deallocate (AS, iiBODYS, iiXS, iiVS, iiRADIUS, iiNAME, iiKSTAR, iiZLMSTY)
-            deallocate (ASS, BODYSS, XSS, VSS)
-            cycle
-         endif
-      elseif ( code == 2 ) then
-         if ( mod (int(nint(AS(1))),tout) /= 0 ) then
-            deallocate (AS, iiBODYS, iiXS, iiVS, iiRADIUS, iiNAME, iiKSTAR, iiZLMSTY)
-            deallocate (ASS, BODYSS, XSS, VSS)
-            cycle
-         endif
-      endif
+! if (debug == 1 ) print*,"Checking dtout option."
+! print*,"salam", mod (int(nint(AS(1))),tout)
+! print*,AS(1), nint(AS(1)), int(nint(AS(1)))
+!       if ( code == 1 .or. code == 3 ) then
+!          if ( mod (int(nint(AS(10))),tout) /= 0 )then
+!             deallocate (AS, iiBODYS, iiXS, iiVS, iiRADIUS, iiNAME, iiKSTAR, iiZLMSTY)
+!             deallocate (ASS, BODYSS, XSS, VSS)
+!             cycle
+!          endif
+!       elseif ( code == 2 ) then
+!          if ( mod (int(nint(AS(1))),tout) /= 0 ) then
+!             deallocate (AS, iiBODYS, iiXS, iiVS, iiRADIUS, iiNAME, iiKSTAR, iiZLMSTY)
+!             deallocate (ASS, BODYSS, XSS, VSS)
+!             deallocate (ASt, iBODYSt, iXSt, iVSt, iNAMEt)
+!             deallocate (ASSt, BODYSSt, XSSt, VSSt)
+!             cycle
+!          endif
+!       endif
 
 
 !***********************************
@@ -316,38 +368,36 @@ program read_nbody
 ! 			     & NTOT, BODYS, XS, VS, RADIUS, NAME, KSTAR, ZLMSTY, r )
 !***********************************
 !print*,intot,ntot,"intot,ntot"
-      i = 0; k = 0; iNTOT = 0
+      i = 0; k = 0; iNTOT = 0; NTAIL = 0
 !print*,intot,ntot,"intot,ntot"
 
       if (debug == 1 ) write (*,*) "Allocating ir Array in test_name."
       if (debug == 1 ) write (*,*) "INIT_NTOT = ", INIT_NTOT
 
       do i = 1, iiNTOT
-         if (debug == 1 ) then
-!   if (iiname(i)<=0 .or. iiname(i)> INIT_NTOT) print*,"iiname=",iiname(i),"for i =", i
-         endif
          if ( iiNAME(i) >= 1 .AND. iiNAME(i) <= INIT_NTOT .AND. iiBODYS(i) > 0 ) then
-! 		if ( iiNAME(i) >= 1 .AND. iiNAME(i) <= N .AND. iiBODYS(i) > 0 ) then
             k = k + 1
          endif
       enddo
-      print*,"iNTOT =", k
       iNTOT = k
+      print*,"iNTOT =", iNTOT
+      k = 0
+      do i = 1, iNTAIL
+         if ( iNAMEt(i) >= 1 .AND. iNAMEt(i) <= INIT_NTOT .AND. iBODYSt(i) > 0 ) then
+            k = k + 1
+         endif
+      enddo
+      NTAIL = k
+      print*,"NTAIL =", NTAIL
 
       allocate (iBODYS(iNTOT)); allocate(iXS(3,iNTOT)); allocate(iVS(3,iNTOT))
       allocate(iRADIUS(iNTOT)); allocate(iNAME(iNTOT)); allocate(iKSTAR(iNTOT)); allocate(iZLMSTY(iNTOT))
-! allocate(ir(iNTOT)); allocate (irho(NTOT))
 
       if (debug == 1 ) write (*,*)"Allocating test_name."
       k = 0
       do i = 1, iiNTOT
          if ( iiNAME(i) >= 1 .AND. iiNAME(i) <= INIT_NTOT .AND. iiBODYS(i) > 0 ) then
-! 		if ( iiNAME(i) >= 1 .AND. iiNAME(i) <= N .AND. iiBODYS(i) > 0 ) then
-! 			ir(i) = sqrt( iXS(1,i)*iXS(1,i) + iXS(2,i)*iXS(2,i) + iXS(3,i)*iXS(3,i) )
-! 			if ( code == 1 ) then
-! 				if ( ir(i) <= 4*rt ) then
             k = k + 1
-! 					r(k) = ir(i)
             iBODYS(k) = iiBODYS(i)
             iXS(1,k) = iiXS(1,i); iXS(2,k) = iiXS(2,i); iXS(3,k) = iiXS(3,i)
             iVS(1,k) = iiVS(1,i); iVS(2,k) = iiVS(2,i); iVS(3,k) = iiVS(3,i)
@@ -355,18 +405,26 @@ program read_nbody
             iNAME(k) = iiNAME(i)
             iKSTAR(k) = iiKSTAR(i)
             iZLMSTY(k) = iiZLMSTY(i)
-! 					rho(k) = irho(i)
-         else
-!			print*,"zzzzzzzzzzzzzz!", iiname(i), iibodys(i)
          endif
-
       enddo
       iiNTOT = 0
-! print*,ixs
-      deallocate  ( iiBODYS, iiXS, iiVS, iiRADIUS , iiNAME, iiKSTAR, iiZLMSTY )
-!************************************
-!	write(*,'(i10, f11.1, i 10)')NTOT,AS(10),N
+      deallocate  (iiBODYS, iiXS, iiVS, iiRADIUS , iiNAME, iiKSTAR, iiZLMSTY)
 
+      allocate (BODYSt(NTAIL)); allocate(XSt(3,NTAIL)); allocate(VSt(3,NTAIL)); allocate(NAMEt(NTAIL))
+      k = 0
+      do i = 1, iNTAIL
+         if ( iNAMEt(i) >= 1 .AND. iNAMEt(i) <= INIT_NTOT .AND. iBODYSt(i) > 0 ) then
+            k = k + 1
+            BODYSt(k) = iBODYSt(i)
+            XSt(1,k) = iXSt(1,i); XSt(2,k) = iXSt(2,i); XSt(3,k) = iXSt(3,i)
+            VSt(1,k) = iVSt(1,i); VSt(2,k) = iVSt(2,i); VSt(3,k) = iVSt(3,i)
+            NAMEt(k) = iNAMEt(i)
+         endif
+      enddo
+      iNTAIL = 0
+      deallocate  (iBODYSt, iXSt, iVSt, iNAMEt)
+
+!************************************
 ! 	call neighbor_find ( n_neighbor, iNTOT, iXS, list_neighbor_idx, list_neighbor_dis ) ! finding all neighbors and their distances for all stars and saving them in list_neighbor_idx and list_neighbor_dis arrays correspondingly.
 !************************************
 
@@ -402,30 +460,21 @@ program read_nbody
       allocate(inei_NAME(iNTOT, n_neighbor + 1)); allocate(iL2(iNTOT, n_neighbor + 1))
 
       irho = 0; irho_tot = 0; irho_times_dis_tot = 0; Xd = 0
-! tree => kdtree2_create(mydata,rearrange=.true.,sort=.true.)
       do i=1,iNTOT
-! 	if ( iBODYS(i) > 0 .AND. iNAME(i) >= 1 .AND. iNAME(i) <= INIT_NTOT ) then
          m_tot_5th=0; sixth_neighbor_distance=0
          sixth_neighbor_distance=sqrt(list_neighbor_dis (i,n_neighbor + 1))
-
-! 	write(*,*)results(7)%idx, sixth_neighbor_distance
          do ll=2, n_neighbor
             m_tot_5th=m_tot_5th+iBODYS(list_neighbor_idx (i,ll)) ! Total mass of fifth nearest neibors.
          enddo
          irho(i) = m_tot_5th/(sixth_neighbor_distance ** 3.)
          irho_tot = irho_tot + irho(i)
-! 	print*,"!!!",i,irho(i), irho_tot
          irho_times_dis_tot(1) = irho_times_dis_tot(1) + irho(i) * iXS(1,i)
          irho_times_dis_tot(2) = irho_times_dis_tot(2) + irho(i) * iXS(2,i)
          irho_times_dis_tot(3) = irho_times_dis_tot(3) + irho(i) * iXS(3,i)
-! 	write(*,*)i, m_tot_5th
-! 	endif
-
       enddo
       Xd(1) = ( irho_times_dis_tot(1)/irho_tot )
       Xd(2) = ( irho_times_dis_tot(2)/irho_tot )
       Xd(3) = ( irho_times_dis_tot(3)/irho_tot )
-! write(*,*) (Xd(i),i=1,3)
       if (debug == 1 ) then
          write (*,*) "Xd:", (Xd(i),i=1,3)
          write (*,*) "Done."
@@ -436,80 +485,52 @@ program read_nbody
          ll = 0
          do ll=2, n_neighbor+1
             nid = list_neighbor_idx(i,ll) ! Index of nearest neighbor.
-
-! 		if ( iBODYS(i) > 0 .AND. iNAME(i) >= 1 .AND. iNAME(i) <= INIT_NTOT ) then
-
             inei_BODYS(i,ll) = iBODYS(nid)
             inei_NAME(i,ll) = iNAME(nid)
-! print*,"* ",ixs(1,i),ixs(2,i),ixs(3,i)
             rx = iXS(1,i) - iXS (1,nid)
             ry = iXS(2,i) - iXS (2,nid)
             rz = iXS(3,i) - iXS (3,nid)
             idel_r(i,ll) = sqrt ( rx*rx + ry*ry + rz*rz )
-! 		print*, "%%%%%%%%%%%%%%%%%",i, ll, idel_r(i,ll)
-! 		print*, "#################",i, ll, list_neighbor_dis (i,ll)
-
             vx = iVS(1,i) - iVS (1,nid)
             vy = iVS(2,i) - iVS (2,nid)
             vz = iVS(3,i) - iVS (3,nid)
             idel_v2(i,ll) = ( vx*vx + vy*vy + vz*vz )
-
             Lx = ry*vz - rz*vy
             Ly = rz*vx - rx*vz
             Lz = rx*vy - ry*vx
             iL2(i,ll) = lx*lx + ly*ly + lz*lz
 
-
 ! 		if (iname(i)==80373)	write (*,'(a15, 4i8, 4f12.2)')"#######", i, nid, iname(i), inei_NAME(i ,ll), iBODYS(i),&
 ! & inei_BODYS(i ,ll), idel_r(i, ll)*AU*Rstar, list_neighbor_dis (i,ll)*AU*Rstar
-
-
-! 		endif
-
          enddo
       enddo
-! **********************************
-
 
 !***********************************
 !
 ! 	call coordinate_correction ( iNTOT, Xdt, iXS ) ! Correcting the origin of coordinate system by subtracting all star coordinates from measured density center.
 !***********************************
       do j = 1, iNTOT
-! print*,"* ",ixs(1,j),ixs(2,j),ixs(3,j)
          i = 0
          do i = 1, 3
             iXS(i,j) = iXS(i,j) - Xd(i)
          enddo
-! print*,"* ",ixs(1,j),ixs(2,j),ixs(3,j), xd(i)
       enddo
 
-! print*,xd
-      !***********************************
+!***********************************
 ! call test rt ( code, iNTOT, AS, iBODYS, iXS, iVS, iRADIUS, iNAME, iKSTAR, iZLMSTY,&
 ! 			     & NTOT, BODYS, XS, VS, RADIUS, NAME, KSTAR, ZLMSTY, r )
 !***********************************
-!print*,intot,ntot,"intot,ntot"
       i = 0; k = 0; NTOT = 0
-!print*,intot,ntot,"intot,ntot"
       allocate(ir(iNTOT))
       if (debug == 1 ) write (*,*) "Testing rt."
-
       if ( AS(1) > 0.0001) then ! This condition is for tidal radius to be correct at t=0 and includes all stars.
-
          do i = 1, iNTOT
-!  		if ( iNAME(i) >= 1) then
             ir(i) = sqrt( iXS(1,i)*iXS(1,i) + iXS(2,i)*iXS(2,i) + iXS(3,i)*iXS(3,i) )
-! print*,ir(i)
             if ( ir(i) <= rt ) then
                k = k + 1
             endif
-
-!  		endif
          enddo
-
          NTOT = k
-
       else
          NTOT = iNTOT
       endif
@@ -593,19 +614,21 @@ program read_nbody
       rtemp = 0; mtemp = 0; check = 1
       if (debug == 1 ) write (*,*) "Calculating LRs."
       mtot = 0
-      do i = 1, NTOT ! ************ Converting from Nbody units to Astrophysical units:
-! print*, i
+      do i = 1, NTOT ! Converting from Nbody units to Astrophysical units:
          BODYS(i) = BODYS(i) * Mstar ! Converting masses to Solar Mass.
          mtot = mtot + BODYS(i)
          r(i) = r(i)  *Rstar ! Converting distances to pc.
-! print*,r(i)
          rho(i) = rho(i) * Mstar / Rstar / Rstar / Rstar
          do k = 1, 3 ! Converting coordinates to pc & velocities to km/s.
             XS(k,i)=XS(k,i)*Rstar; VS(k,i)=VS(K,i)*Vstar
-! print*,XS(k,i)
          enddo
       enddo
-
+      do i = 1, NTAIL ! Converting from Nbody units to Astrophysical units (tidal tail):
+        BODYSt(i) = BODYSt(i) * Mstar
+        do k = 1, 3 ! Converting coordinates to pc & velocities to km/s.
+           XSt(k,i)=XSt(k,i)*Rstar; VSt(k,i)=VSt(K,i)*Vstar
+        enddo
+      enddo
       if ( AS(1) < 0.0001) mtot0 = mtot
       rt = rt * Rstar
       if ( res_mtot0 /= 0. ) then
@@ -650,11 +673,9 @@ program read_nbody
       rc = 0; rho2 = 0; rho2_tot_in_rh = 0
 
       do i=1, NTOT
-! 	if ( r(i) <= rt ) then
          if ( r(i) <= LR(3) ) then
             rho2(i) = rho(i) * rho(i)
             rc = rc + r(i) * r(i) * rho2(i)
-! 		print*,r(i), rho(i),"@@@@@@@@"
             rho2_tot_in_rh = rho2_tot_in_rh + rho2(i)
          endif
       enddo
@@ -662,8 +683,6 @@ program read_nbody
       rc = sqrt( rc / rho2_tot_in_rh )
 
       if (debug == 1 ) write (*,*)"Calculating Core Radius. Done."
-
-
 
 
 !***********************************
@@ -734,27 +753,24 @@ program read_nbody
 !************************************
 
       if ( major_output == 1 ) then
-! if ( code == 1 ) then
-
          Write(output_file , '( f7.1 )' ) T6
          if ( nint(T6) < 10 ) then
-            output_file = trim(model_name) // '0000' // trim(output_file) ! // ".txt"
-! 		output_file = output_file // ".txt"
-! 		print*,output_file,len_trim(output_file)
+            output_file = '0000' // trim(output_file) ! // ".txt"
          else if ( nint(T6) < 100 ) then
-            output_file = trim(model_name) // '000' // trim(output_file)
+            output_file = '000' // trim(output_file)
          else if ( nint(T6) < 1000 ) then
-            output_file = trim(model_name) // '00' // trim(output_file)
+            output_file = '00' // trim(output_file)
          else if ( nint(T6) < 10000 ) then
-            output_file = trim(model_name) // '0' // trim(output_file)
+            output_file = '0' // trim(output_file)
          else
-            output_file = trim(model_name) // trim(output_file)
+            output_file = trim(output_file)
          endif
-
-
-         output_file = trim(model_name) // '/' // trim(output_file)
+         output_file_tail = 'tail/' // trim(output_file)
+         output_file = 'snapshot/' // trim(output_file)
          output_file = sweep_blanks(output_file)
+         output_file_tail = sweep_blanks(output_file_tail)
          open(4,file=output_file)
+         open(8,file=output_file_tail)
          do i=1,NTOT
             if ( code == 1 .or. code == 3) then
                write(4,'(i7, f14.9, 6f13.6 , i3, 2f15.5)')NAME(i), BODYS(i),(XS(K,i),K=1,3),&
@@ -764,7 +780,14 @@ program read_nbody
                &(VS(K,i),K=1,3)
             endif
          enddo
-
+         do i=1,NTAIL
+           if ( code == 2 ) then
+             write(8,'(i7, f15.9, 6f15.6 )')NAMEt(i), BODYSt(i),(XSt(K,i),K=1,3),&
+             &(VSt(K,i),K=1,3)
+             write(*,'(i7, f15.9, 6f15.6 )')NAMEt(i), BODYSt(i),(XSt(K,i),K=1,3),&
+             &(VSt(K,i),K=1,3)
+           endif
+         enddo
       endif !End of major_output loop
 
 ! Write to "overview.txt" file.
@@ -788,14 +811,16 @@ program read_nbody
       FLUSH(2)
       FLUSH(3)
       FLUSH(7)
+      FLUSH(8)
       FLUSH(10)
 !************************************
       call kdtree2_destroy(tree)
-      deallocate ( AS,BODYS, XS, VS, RADIUS , NAME, KSTAR, ZLMSTY, ASS, BODYSS, XSS, VSS,&
-      & mydata, list_neighbor_idx, list_neighbor_dis, r )
+      deallocate (AS, BODYS, XS, VS, RADIUS , NAME, KSTAR, ZLMSTY, ASS, BODYSS, XSS, VSS,&
+      & mydata, list_neighbor_idx, list_neighbor_dis, r)
       deallocate (irho, rho, rho2)
 
-      deallocate ( del_r, del_v2, nei_BODYS, nei_NAME, L2 )
+      deallocate (del_r, del_v2, nei_BODYS, nei_NAME, L2)
+      deallocate(ASt, BODYSt, XSt, VSt, NAMEt, ASSt, BODYSSt, XSSt, VSSt)
 
       loop_index = loop_index + 1
 
@@ -855,12 +880,11 @@ contains
    end function sweep_blanks
 
 
-   subroutine get_model_name ( arg1, arg2, res_init_ntot, res_mtot0 )
+   subroutine get_model_name ( arg1, res_init_ntot, res_mtot0 )
       implicit none
       integer::i
       character(len=100) :: arg1
-      character(len=40) :: arg2
-      character(len=10) :: arg3, arg4
+      character(len=10) :: arg2, arg3
       integer :: res_init_ntot
       real*8 :: res_mtot0
 
@@ -868,10 +892,9 @@ contains
       call getarg(1, arg1)
       call getarg(2, arg2)
       call getarg(3, arg3)
-      call getarg(4, arg4)
-      read(arg3,*) res_init_ntot ! Converts arg3 to integer
-      read(arg4,*) res_mtot0 ! Convert arg4 to double precision
-      write (*,*) arg3, arg4, res_mtot0
+      read(arg2,*) res_init_ntot ! Converts arg2 to integer
+      read(arg3,*) res_mtot0 ! Convert arg3 to double precision
+      write (*,*) arg2, arg3, res_mtot0
 
    end subroutine get_model_name
 
