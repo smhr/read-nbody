@@ -1,0 +1,9 @@
+*~
+*.mod
+*.o
+*.exe
+read-nbody
+<<<<<<< HEAD
+read-nbody-tail
+=======
+>>>>>>> tail
