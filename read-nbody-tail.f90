@@ -1,9 +1,9 @@
 !**************************************************************
-! read_nbody (st version)
+! read_nbody
 ! Author: S.Mohammad Hoseini Rad
 ! smhr313@gmail.com
 ! Nov 2012, IASBS, Zanjan
-! Last modification: 7 July 2019 / 16 Tir 1398
+! Last modification: 15 November 2019 / 24 Aban 1398
 !**************************************************************
 !     This program is free software; you can redistribute it and/or modify
 !     it under the terms of the GNU General Public License as published by
@@ -23,22 +23,21 @@
 
 ! ******************************************
 program read_nbody
-! use read_mod
    use kdtree2_module
    implicit none
 ! ******************************************
-   real*8::start, finish ! For cpu_time subroutine.
-   integer*4::i,j,l,k,ll ! loop counter variables.
+   real*8::start ! used for cpu_time
+   integer*4::i,j,k,ll ! loop counter variables
    integer*4::IO,code, err, debug
-   integer::tscreen ! Frequency of output on screen.
-   integer::tout ! Frequency of output on harddisk.
-   integer,dimension(13)::buff ! This related to measuring size of input file.
-   integer*4::status ! This is related to measuring size of input file.
+   integer::tscreen ! frequency of output on screen
+   integer::tout ! frequency of output on harddisk
+   integer,dimension(13)::buff ! used for measuring size of input file
+   integer*4::status ! used for measuring size of input file
    integer::loop_index
    integer::INIT_NTOT
    integer::INIT_NTAIL
 ! ******************************************
-! NBODY6 outputs (here inputs). See output.f in Ncode directory of NBODY6,
+! NBODY6 outputs (here inputs). see output.f in Ncode directory of NBODY6
 ! before removing stars with NAME < 1 and outside tidal rdius.
    integer*4::iiNTOT
    integer,dimension(:),allocatable::iiNAME,iiKSTAR
@@ -50,35 +49,38 @@ program read_nbody
    real*8,dimension(:),allocatable::iBODYS,iRADIUS,iZLMSTY
    real*8,dimension(:,:),allocatable::iXS,iVS
 ! ******************************************
+! NBODY6 tidal tail outputs (here inputs). see output.f in Ncode directory of NBODY6
+! before removing stars with NAME < 1
    integer*4::iNTAIL
    integer,dimension(:),allocatable::iNAMEt
    real*8,dimension(:),allocatable::iBODYSt
    real*8,dimension(:,:),allocatable::iXSt,iVSt
 ! ******************************************
-! NBODY6 outputs (here inputs), after removing stars with NAME < 1 and outside tidal rdius.
+! NBODY6 outputs (here inputs), after removing stars with NAME < 1 and outside tidal rdius
    integer*4::NTOT,NK,N,MODEL,NRUN
    integer,dimension(:),allocatable::NAME,KSTAR
    real*8,dimension(:),allocatable::AS,BODYS,RADIUS,ZLMSTY
    real*8,dimension(:,:),allocatable::XS,VS
    real*4,dimension(:,:),allocatable::XSS,VSS
-   real*4,dimension(:),allocatable::BODYSS,ASS  ! For converting single precision to double precision ( if code = 2).
+   real*4,dimension(:),allocatable::BODYSS,ASS  ! used for converting single precision to double precision ( if code = 2)
 ! ******************************************
+! NBODY6 tidal tail outputs (here inputs), after removing stars with NAME < 1
    integer*4::NTAIL
    integer,dimension(:),allocatable::NAMEt
    real*8,dimension(:),allocatable::ASt,BODYSt
    real*8,dimension(:,:),allocatable::XSt,VSt
    real*4,dimension(:,:),allocatable::XSSt,VSSt
-   real*4,dimension(:),allocatable::BODYSSt,ASSt  ! For converting single precision to double precision ( if code = 2).
+   real*4,dimension(:),allocatable::BODYSSt,ASSt  ! used for converting single precision to double precision ( if code = 2)
 ! ******************************************
    real*8::mtot, imtot, T6, mtot0
-   integer,dimension(:,:),allocatable::list_neighbor_idx ! Neighbor index array.
-   real,dimension(:,:),allocatable::list_neighbor_dis ! Neighbor distance array.
-   character(len=100)::output_file, input_file, fprefix
+   integer,dimension(:,:),allocatable::list_neighbor_idx ! neighbor index array
+   real,dimension(:,:),allocatable::list_neighbor_dis ! neighbor distance array
+   character(len=100)::output_file,input_file
    character(len=100)::output_file_tail
-   integer::n_neighbor ! Number of nearest neighbors in Casterano & Hut method.
-   real*8,dimension(3)::Xd ! Density center coordinates.
-   real*8,dimension(5)::LR ! Lagrangian radii array.
-   real*8,dimension(:),allocatable::r,ir ! Position vector of stars after and befor tidal radius detemination.
+   integer::n_neighbor !number of nearest neighbors in Casterano & Hut method
+   real*8,dimension(3)::Xd ! density center coordinates
+   real*8,dimension(5)::LR ! Lagrangian radii array
+   real*8,dimension(:),allocatable::r,ir ! position vector of stars after and befor tidal radius detemination
 ! ******************************************
    type(kdtree2), pointer::tree
    real, allocatable:: mydata(:,:)
@@ -93,8 +95,7 @@ program read_nbody
 ! ******************************************
    real::Ndiss, Mdiss
 ! ******************************************
-   character(len=40)::model_name, dir_command
-   character(len=40)::model_name_tail
+   character(len=40)::dir_command
 ! ******************************************
    real*8::rx, ry, rz, vx, vy, vz, Ebin, a, ecc, ecc2, Lx, Ly, Lz, fbin0, fbint
    real*8,dimension(:,:),allocatable::del_r, del_v2, nei_BODYS, L2
@@ -115,42 +116,43 @@ program read_nbody
 
 ! ******************************************
 !** Initialization of internal variables ***
-! Please don't change this variable.
+! Do not change these variables
    IO = 0
    err = 0
    status = 0
-   n_neighbor = 6 ! Number of nearest neighbors in Casterano & Hut (1985) and Aarseth (2001) method.
+   n_neighbor = 6 ! number of nearest neighbors in Casterano & Hut (1985) and Aarseth (2001) method
    loop_index = 0
    INIT_NTOT = 0; iNTOT = 0; imtot = 0
-   rstep = 0.01 ! Bin length in pc for calculating lagrangian radii.
+   rstep = 0.01 ! bin length in pc for calculating lagrangian radii
    res_INIT_NTOT = 0
    res_mtot0 = 0.
 
 ! ************ Code options ****************
 ! ******************************************
-   code = 2  	! 1:NBODY6 custom, 2: NBODY6, 3: NBODY6 new custom version
-   tscreen = 1		! Time interval of output on screen & harddisk. (NBODY6 custom: Myr, NBODY6: N-body unit)
-   tout = 100000		! Time interval of output on screen & harddisk. It Also prevent neighbor arrays and kdtree2 pointers to be allocated. So if you have many time snapshots, by increasing 'tout', you can pass the memory overflow problem. (NBODY6 custom: Myr, NBODY6: N-body unit)
-   debug = 1		! 1: Debug mode.
-   diss_check = 1		! 1: Check dissolution of cluster; 0: No check.
-   Ndiss = 0		! By reaching to this fraction of initial number of stars, the cluster is considered as a dissolved cluster; 0: Suppress this option.
-   Mdiss = 0.001		! By reaching to this fraction of initial mass, the cluster is considered as a dissolved cluster; 0: Suppress this option.
+   code = 2         ! 1:NBODY6 custom, 2: NBODY6, 3: NBODY6 new custom version
+   tscreen = 1      ! time interval of output on screen & harddisk. (NBODY6 custom: Myr, NBODY6: N-body unit)
+   tout = 100000    ! time interval of output on screen & harddisk (suppressed)
+   ! it also prevent neighbor arrays and kdtree2 pointers to be allocated
+   ! so if you have many time snapshots, by increasing 'tout'
+   ! you can pass the memory overflow problem. (NBODY6 custom: Myr, NBODY6: N-body unit)
+   debug = 1        ! 1: debug mode
+   diss_check = 1   ! 1: check dissolution of cluster; 0: no check
+   Ndiss = 0        ! by reaching to this fraction of initial number of stars, the cluster is considered as a dissolved cluster;
+   ! 0: Suppress this option
+   Mdiss = 0.001    ! By reaching to this fraction of initial mass, the cluster is considered as a dissolved cluster;
+   ! 0: Suppress this option
    major_output = 1
-! Please note just use one of Ndiss or Mdiss options.
-!  model_name = 'N7500d8.5Rh3nei5_in_Rt'
-   find_binary = 1 ! 0: Skip to find binary; 1: Find binaries.
+! Please note just use one of Ndiss or Mdiss options
+   find_binary = 1  ! 0: Skip to find binary; 1: Find binaries
    binary_energy_criterion = -0.001
 
    ! ********* Input & Output files. *********
    ! *****************************************
    call get_model_name ( input_file, res_INIT_NTOT, res_mtot0 )
-!  dir_command = 'rm -f ./binary.txt; touch ./binary.txt'
-!  call system ( dir_command )
-!  input_file='N7500.POS' ! Input file.
    open(1,file=input_file, form='unformatted')
-   open(2,file='overview.txt') ! This file includes some cluster characteristics.
-   open(3,file='density_center.txt') ! This file includes density center coordinate of cluster during evolution.
-   open(7,file='radii.txt') ! This file includes Lagrangian radii.
+   open(2,file='overview.txt') ! this file includes some cluster characteristics
+   open(3,file='density_center.txt') ! this file includes density center coordinate of cluster during evolution
+   open(7,file='radii.txt') ! this file includes Lagrangian radii
    open(10,file='binary.txt')
    open(33,file='OUT33', form='unformatted')
 ! ******************************************
@@ -160,7 +162,7 @@ program read_nbody
    print*,dir_command
    call system ( dir_command )
 
-   call STAT (input_file, buff,status) ! Calculating size of input file.
+   call STAT (input_file, buff,status) ! calculating size of input file
    if (status == 0) then
       write(*,*)
       write(*,*)"Size of file is", buff(8), "Byte."
@@ -168,7 +170,6 @@ program read_nbody
 ! ******************************************
    write(2,*) "    T_NB    T_Myr   N        M      M_ratio    Rh       Rt       Rc     Rc_O_Rh     RC    Rh_O_Rt   fbin0    fbint"
    write(7,*)" T(NBODY) Time(Myr) LR_0.01   LR_0.10   LR_0.30  LR_0.50   LR_0.70     Rt         Rc       Rc/Rh      RC      Rh/Rt"
-! write(2,*) "      T(NBODY)   T(Myr)   NTOT(in Rt)    MTOT(in Rt)       Rh            Rt"
 
 ! ************ Read in loop ****************
 ! *******************************************
@@ -177,7 +178,7 @@ program read_nbody
 ! By activating this loop, you can define exact time in terms of output interval (DELTAT in NBODY6 or dtscreen in mcluster [N-body units (Myr in Nbody6 custom)]).
 
 
-   DO WHILE ( .TRUE. ) ! Repeating the loop until the end of input file.
+   DO WHILE ( .TRUE. ) ! repeating the loop until the end of input file
 
 ! *******************************************
 ! define_arrays_size ( code, input_file, loop_index, NTOT, MODEL, NRUN, NK, N, INIT_NTOT ) ! Read number of particles in each loop.
@@ -190,7 +191,6 @@ program read_nbody
          endif
       else if ( code == 2 ) then
          read(1, iostat=IO)iiNTOT, MODEL, NRUN, NK, N
-         ! read(1, iostat=IO)iiNTOT, NK, N
          if ( loop_index == 0 ) INIT_NTOT = iiNTOT
          if (debug == 1 ) write (*,'(5i10)') iiNTOT, MODEL, NRUN, NK, N
          if ( IO /= 0 ) then
@@ -215,11 +215,10 @@ program read_nbody
 ! *******************************************
 
 ! *******************************************
-! This condition is for appropriate termination of the program if cluster dissolves.
+! this condition is for appropriate termination of the program if cluster dissolves.
       if ( iiNTOT > 0 ) then
          if ( diss_check == 1 ) then
             if ( Ndiss > 0  ) then
-! 			print*,iiNTOT , Ndiss , INIT_NTOT, Ndiss * INIT_NTOT, iiNTOT - Ndiss * INIT_NTOT
                if ( iiNTOT <= Ndiss * INIT_NTOT ) then
                   err = 2
                   call termination ( IO, err )
@@ -227,7 +226,6 @@ program read_nbody
             endif
             if ( loop_index == 1) imtot = mtot
             if ( imtot > 0 ) then
-! 			 print*,Ndiss,Mdiss
                if ( Ndiss == 0 .and. Mdiss > 0 ) then
                   if ( mtot <= Mdiss * imtot ) then
                      err = 2
@@ -250,7 +248,7 @@ program read_nbody
       endif
 
 !***********************************
-! 	call readin ( code, input_file, iNTOT, NK, AS, iBODYS, iXS, iVS, iRADIUS, iNAME, iKSTAR, iZLMSTY ) ! Read input arrays according to the output.f in Ncode directory of NBODY6. Note that there are some differences between NBODY6 custom and NBODY6 input variables.
+! Read input arrays according to the output.f in Ncode directory of NBODY6. Note that there are some differences between NBODY6 custom and NBODY6 input variables.
 !************************************
       allocate (AS(NK)); allocate (iiBODYS(iiNTOT)); allocate(iiXS(3,iiNTOT)); allocate(iiVS(3,iiNTOT))
       allocate(iiRADIUS(iiNTOT)); allocate(iiNAME(iiNTOT)); allocate(iiKSTAR(iiNTOT)); allocate(iiZLMSTY(iiNTOT))
@@ -302,30 +300,30 @@ program read_nbody
             (iNAMEt(J),J=1,iNTAIL)
          if (debug == 1 ) write (*,'(i3,f14.9)')(k,ASSt(K),K=1,13)
 
-         do J=1, NK	! Convert to double precision
+         do J=1, NK ! Convert to double precision
             AS(J) = ASS(J)
          enddo
-         do J=1, 13	! Convert to double precision
+         do J=1, 13 ! Convert to double precision
             ASt(J) = ASSt(J)
          enddo
 
-         do J=1, iiNTOT	! Convert to double precision
+         do J=1, iiNTOT ! convert to double precision
             iiBODYS(J) = BODYSS(J)
             do K=1, 3
                iiXS(K,J) = XSS(K,J)
                iiVS(K,J) = VSS(K,J)
             enddo
          enddo
-         do J=1, iNTAIL	! Convert to double precision
+         do J=1, iNTAIL ! convert to double precision
             iBODYSt(J) = BODYSSt(J)
             do K=1, 3
                iXSt(K,J) = XSSt(K,J)
                iVSt(K,J) = VSSt(K,J)
             enddo
          enddo
-         rt = AS(5) ! Tidal Radius.
+         rt = AS(5) ! tidal Radius.
          Tstar = AS(11)
-         T6 = AS(1) * Tstar ! Astrophysical time (Myr), Nbody time * TSCALE
+         T6 = AS(1) * Tstar ! astrophysical time (Myr), Nbody time * TSCALE
          Mstar = AS(4)
          Rstar = AS(3)
          Vstar = AS(12)
@@ -335,13 +333,15 @@ program read_nbody
          endif
 
       endif
-      print*,"After converting to double precision"
-      do i=1,iNTAIL
-        if ( code == 2 ) then
-          write(*,'(i7, f14.9, 6f13.6 )')iNAMEt(i), iBODYSt(i),(iXSt(K,i),K=1,3),&
-          &(iVSt(K,i),K=1,3)
-        endif
-      enddo
+      if (debug == 1) then
+         print*,"After converting to double precision"
+         do i=1,iNTAIL
+            if ( code == 2 ) then
+               write(*,'(i7, f14.9, 6f13.6 )')iNAMEt(i), iBODYSt(i),(iXSt(K,i),K=1,3),&
+               &(iVSt(K,i),K=1,3)
+            endif
+         enddo
+      endif
 !************************************
 ! if (debug == 1 ) print*,"Checking dtout option."
 ! print*,"salam", mod (int(nint(AS(1))),tout)
@@ -364,13 +364,9 @@ program read_nbody
 
 
 !***********************************
-! call test_name ( code, iNTOT, AS, iBODYS, iXS, iVS, iRADIUS, iNAME, iKSTAR, iZLMSTY,&
-! 			     & NTOT, BODYS, XS, VS, RADIUS, NAME, KSTAR, ZLMSTY, r )
+! remove stars with index < 1
 !***********************************
-!print*,intot,ntot,"intot,ntot"
       i = 0; k = 0; iNTOT = 0; NTAIL = 0
-!print*,intot,ntot,"intot,ntot"
-
       if (debug == 1 ) write (*,*) "Allocating ir Array in test_name."
       if (debug == 1 ) write (*,*) "INIT_NTOT = ", INIT_NTOT
 
@@ -425,7 +421,8 @@ program read_nbody
       deallocate  (iBODYSt, iXSt, iVSt, iNAMEt)
 
 !************************************
-! 	call neighbor_find ( n_neighbor, iNTOT, iXS, list_neighbor_idx, list_neighbor_dis ) ! finding all neighbors and their distances for all stars and saving them in list_neighbor_idx and list_neighbor_dis arrays correspondingly.
+! finding all neighbors and their distances for all stars
+! and saving them in list_neighbor_idx and list_neighbor_dis arrays correspondingly
 !************************************
 
       if (debug == 1 ) write (*,*) "Finding neighbor with iNTOT = ", iNTOT
@@ -435,9 +432,10 @@ program read_nbody
       allocate (list_neighbor_idx (iNTOT,n_neighbor + 1))
       allocate (list_neighbor_dis (iNTOT,n_neighbor + 1))
 
-      do i=1,iNTOT ! Find star neighbors and their distances to the ith star in XSt array.
-! if ( iBODYS(i) > 0 .AND. iNAME(i) >= 1 .AND. iNAME(i) <= INIT_NTOT ) then
-         allocate (results(n_neighbor + 1)) ! The results(1) is associated with the ith star. The results(2..n_neighbor+1) are associated with n_neighbor nearest neighbors. So for 6 nearest neighbors, size of results array must be 7.
+      do i=1,iNTOT ! find star neighbors and their distances to the ith star in XSt array
+         allocate (results(n_neighbor + 1)) ! results(1) is associated with the ith star
+         !results(2..n_neighbor+1) are associated with n_neighbor nearest neighbors
+         ! so for 6 nearest neighbors, size of results array must be 7.
 
          call kdtree2_n_nearest_around_point(tree,idxin=i,nn=n_neighbor + 1,correltime=0,results=results)
 
@@ -447,11 +445,10 @@ program read_nbody
             list_neighbor_dis (i,ll) = sqrt(results (ll)%dis)
          enddo
          deallocate (results)
-! endif
       enddo
 !************************************
-
-! 	call center_find ( n_neighbor, iNTOT, iBODYS, iXS, list_neighbor_idx, list_neighbor_dis, Xdt )  ! Finding density center of cluster according to the Casterano & Hut (1985) and Aarseth 2001 method. For more details see center_find subroutine.
+! finding density center of cluster according to the Casterano & Hut (1985) and Aarseth 2001 method
+! for more details see center_find subroutine
 !************************************
       if (debug == 1 ) write (*,*) "Finding density center."
 
@@ -464,7 +461,7 @@ program read_nbody
          m_tot_5th=0; sixth_neighbor_distance=0
          sixth_neighbor_distance=sqrt(list_neighbor_dis (i,n_neighbor + 1))
          do ll=2, n_neighbor
-            m_tot_5th=m_tot_5th+iBODYS(list_neighbor_idx (i,ll)) ! Total mass of fifth nearest neibors.
+            m_tot_5th=m_tot_5th+iBODYS(list_neighbor_idx (i,ll)) ! total mass of fifth nearest neibors
          enddo
          irho(i) = m_tot_5th/(sixth_neighbor_distance ** 3.)
          irho_tot = irho_tot + irho(i)
@@ -499,15 +496,11 @@ program read_nbody
             Ly = rz*vx - rx*vz
             Lz = rx*vy - ry*vx
             iL2(i,ll) = lx*lx + ly*ly + lz*lz
-
-! 		if (iname(i)==80373)	write (*,'(a15, 4i8, 4f12.2)')"#######", i, nid, iname(i), inei_NAME(i ,ll), iBODYS(i),&
-! & inei_BODYS(i ,ll), idel_r(i, ll)*AU*Rstar, list_neighbor_dis (i,ll)*AU*Rstar
          enddo
       enddo
 
 !***********************************
-!
-! 	call coordinate_correction ( iNTOT, Xdt, iXS ) ! Correcting the origin of coordinate system by subtracting all star coordinates from measured density center.
+! correcting the origin of coordinate system by subtracting all star coordinates from measured density center
 !***********************************
       do j = 1, iNTOT
          i = 0
@@ -517,8 +510,7 @@ program read_nbody
       enddo
 
 !***********************************
-! call test rt ( code, iNTOT, AS, iBODYS, iXS, iVS, iRADIUS, iNAME, iKSTAR, iZLMSTY,&
-! 			     & NTOT, BODYS, XS, VS, RADIUS, NAME, KSTAR, ZLMSTY, r )
+! test rt
 !***********************************
       i = 0; k = 0; NTOT = 0
       allocate(ir(iNTOT))
@@ -535,21 +527,6 @@ program read_nbody
          NTOT = iNTOT
       endif
 
-
-!################################
-! if (as(1)==200) then
-! open(8,file='nnn')
-! do i= 1,iNTOT
-! write (8,'(8i8,6f13.8)')i, iNAME(i), list_neighbor_idx (i,2), list_neighbor_idx (i,3), list_neighbor_idx (i,4),&
-!  &iNAME(list_neighbor_idx (i,2)), iNAME(list_neighbor_idx (i,3)), iNAME(list_neighbor_idx (i,4)),&
-! & ir(list_neighbor_idx (i,2)), ir(list_neighbor_idx (i,3)), ir(list_neighbor_idx (i,4)),&
-! & iBODYS(list_neighbor_idx (i,2)), iBODYS(list_neighbor_idx (i,3)), iBODYS(list_neighbor_idx (i,4))
-! enddo
-! endif
-
-!################################
-
-
       if (debug == 1 ) write (*,*)"	Allocating test_rt arrays."
       allocate (BODYS(NTOT)); allocate(XS(3,NTOT)); allocate(VS(3,NTOT))
       allocate(RADIUS(NTOT)); allocate(NAME(NTOT)); allocate(KSTAR(NTOT)); allocate(ZLMSTY(NTOT))
@@ -560,20 +537,15 @@ program read_nbody
       if (debug == 1 ) write (*,*) "	Done."
 
       del_r = 0; del_v2 = 0; nei_bodys = 0; nei_NAME = 0
-! print*,AS(1)
       if ( AS(1) > 0.0001) then
          k = 0
          do i = 1, iNTOT
-!  		if ( iNAME(i) >= 1) then
             ir(i) = sqrt( iXS(1,i)*iXS(1,i) + iXS(2,i)*iXS(2,i) + iXS(3,i)*iXS(3,i) )
-! print*,ixs(1,i)
-! 			if ( code == 1 ) then
             if ( ir(i) <= rt ) then
                k = k + 1
                r(k) = ir(i)
                BODYS(k) = iBODYS(i)
                XS(1,k) = iXS(1,i); XS(2,k) = iXS(2,i); XS(3,k) = iXS(3,i)
-! print*,ixs(1,k)
                VS(1,k) = iVS(1,i); VS(2,k) = iVS(2,i); VS(3,k) = iVS(3,i)
                RADIUS(k) = iRADIUS(i)
                NAME(k) = iNAME(i)
@@ -593,12 +565,10 @@ program read_nbody
          enddo
 
       else
-!   print*,ixs
          BODYS = iBODYS; XS = iXS; VS = iVS; RADIUS = iRADIUS
          NAME = iNAME; KSTAR = iKSTAR; ZLMSTY = iZLMSTY; rho = irho
          del_r = idel_r; del_v2 = idel_v2; nei_bodys = inei_bodys
          nei_NAME = inei_NAME; L2 = iL2
-!   print*,ivs
          do i=1, NTOT
             r(i) = sqrt( iXS(1,i)*iXS(1,i) + iXS(2,i)*iXS(2,i) + iXS(3,i)*iXS(3,i) )
          enddo
@@ -608,8 +578,7 @@ program read_nbody
       deallocate ( idel_r, idel_v2, inei_bodys, inei_NAME, iL2 )
       if (debug == 1 ) write (*,*) "Done."
 !***********************************
-!
-! 	call radii ( NTOT, BODYS, XS, AS, mtot, LR ) ! Computing Lagrangian radii and changing units.
+! compute Lagrangian radii and changing units
 !************************************
       rtemp = 0; mtemp = 0; check = 1
       if (debug == 1 ) write (*,*) "Calculating LRs."
@@ -624,24 +593,27 @@ program read_nbody
          enddo
       enddo
       do i = 1, NTAIL ! Converting from Nbody units to Astrophysical units (tidal tail):
-        BODYSt(i) = BODYSt(i) * Mstar
-        do k = 1, 3 ! Converting coordinates to pc & velocities to km/s.
-           XSt(k,i)=XSt(k,i)*Rstar; VSt(k,i)=VSt(K,i)*Vstar
-        enddo
+         BODYSt(i) = BODYSt(i) * Mstar
+         do k = 1, 3 ! Converting coordinates to pc & velocities to km/s.
+            XSt(k,i)=XSt(k,i)*Rstar; VSt(k,i)=VSt(K,i)*Vstar
+         enddo
       enddo
-      if ( AS(1) < 0.0001) mtot0 = mtot
+      if ( AS(1) < 0.0001) then
+         mtot0 = mtot
+      else
+         mtot0 = 0.
+      endif
       rt = rt * Rstar
       if ( res_mtot0 /= 0. ) then
          mtot0 = res_mtot0
+      else
+         mtot0 = 0.
       endif
       do while ( check /= 6 )
          mtemp = 0
-! print*,mtot0, mtot, check, rtemp
          do i = 1, NTOT
-! print*, r(i), rtemp, Rstar
             if ( r(i) <= rtemp ) then
                mtemp = mtemp + BODYS(i)
-!  			print*,mtemp
                if  ( mtemp >= mtot * 0.01 .AND. check == 1)  then
                   LR(1) = rtemp;! print*,"LR1 = ",LR(1)
                   check = 2; exit
@@ -665,13 +637,10 @@ program read_nbody
       if (debug == 1 ) write (*,*)"Calculating LRs. Done."
 
 !***********************************
-!
-! 	core ! Computing Core Radius (Trenti et al. 2007).
+! compute core radius (Trenti et al. 2007).
 !************************************
-
       allocate (rho2(NTOT))
       rc = 0; rho2 = 0; rho2_tot_in_rh = 0
-
       do i=1, NTOT
          if ( r(i) <= LR(3) ) then
             rho2(i) = rho(i) * rho(i)
@@ -679,56 +648,35 @@ program read_nbody
             rho2_tot_in_rh = rho2_tot_in_rh + rho2(i)
          endif
       enddo
-
       rc = sqrt( rc / rho2_tot_in_rh )
-
       if (debug == 1 ) write (*,*)"Calculating Core Radius. Done."
 
-
 !***********************************
-!
-! 	Binary ! Finding binaries.
+! finding binaries.
 !************************************
       if ( find_binary == 1 ) then
          if (debug == 1 ) write (*,*)"Finding binaries."
          Ebin = 0; a = 0; ecc = 0; ecc2 = 0; Nbin = 0; fbin0 = 0; fbint = 0; j = 0
-
-!  if (as(1)==800) print*,name(list_neighbor_idx(1,2)), BODYS(list_neighbor_idx(1,2)),&
-! 		  & BODYS(list_neighbor_idx(1,3)), "^^^^^^^^^^^^^^^^"
-
          do i = 1, NTOT
             if (name(i)==0) print*,"name=",name(i),"for i =", i
             ll=0
             do ll=2, n_neighbor+1
-
                nei_BODYS(i, ll) = nei_BODYS(i, ll) * Mstar
                del_r(i, ll) = del_r(i, ll) * Rstar
                del_v2(i, ll) = del_v2(i, ll) * Vstar * Vstar
                L2(i, ll) = L2(i, ll) * Rstar * Vstar * Rstar * Vstar
-
-               ! *******************************************
-
                Ebin = - ( G * BODYS(i) * nei_BODYS(i, ll) / del_r(i, ll) ) &
                & + 0.5 *  BODYS(i) * nei_BODYS(i, ll) / ( BODYS(i) + nei_BODYS(i ,ll) )&
                & * del_v2(i, ll)
-
                a = - 0.5 * G * BODYS(i) * nei_BODYS(i, ll) / Ebin
-
                ecc2 = 1. - L2(i, ll) / ( G * a * ( BODYS(i) + nei_BODYS(i, ll) ) )
                if ( ecc2 >= 0 ) then
                   ecc = sqrt(ecc2)
                else
                   ecc = 0
                endif
-
-! 		if (name(i)==80373)	write (*,'(a15, 3i8, 7f12.2)')"********", i, name(i), nei_NAME(i ,ll), BODYS(i),&
-! 			& nei_BODYS(i ,ll), ecc, a*AU, del_r(i, ll)*AU,&
-! 			& list_neighbor_dis (i,ll)*AU*Rstar, Ebin
-
                if ( Ebin < binary_energy_criterion ) then
                   if ( NAME(i) == nei_NAME(i, ll) ) cycle
-                  !	write (*,'(a15, 2i8, 6f12.2)')"binary", name(i), nei_NAME(i ,ll), BODYS(i),&
-                  !	& nei_BODYS(i ,ll), ecc, a*AU, del_r(i, ll)*AU,	Ebin
                   Nbin = Nbin + 1
                   write (10,'(2f10.3, 2i10, 6f12.3)') AS(1), T6, name(i), nei_NAME(i ,ll), BODYS(i),&
                   & nei_BODYS(i ,ll), ecc, a*AU, del_r(i, ll)*AU, Ebin
@@ -736,22 +684,20 @@ program read_nbody
             enddo
          enddo
 
-         Nbin = Nbin / 2  !Because each binary counted twice.
+         Nbin = Nbin / 2  ! because each binary counted twice
 
          if (debug == 1 ) then
             print*,Nbin, "binaries were found."
             write (*,*)"Done."
          endif
-      endif !  End of main binary finding condition.
+      endif !  end of main binary finding condition
 
-!fbin0 = ( Nbin * 2. ) / INIT_NTOT
       fbin0 = float( Nbin ) / N
       fbint =  float( Nbin ) / NTOT
-!************************************
-!
-! 	call writeout ( code, output_file, mtot, LR, tscreen, NTOT, NK, AS, BODYS, XS, VS, RADIUS, NAME, KSTAR, ZLMSTY ) ! Writing out outputs.
-!************************************
 
+!************************************
+! writing out outputs
+!************************************
       if ( major_output == 1 ) then
          Write(output_file , '( f7.1 )' ) T6
          if ( nint(T6) < 10 ) then
@@ -781,16 +727,14 @@ program read_nbody
             endif
          enddo
          do i=1,NTAIL
-           if ( code == 2 ) then
-             write(8,'(i7, f15.9, 6f15.6 )')NAMEt(i), BODYSt(i),(XSt(K,i),K=1,3),&
-             &(VSt(K,i),K=1,3)
-             write(*,'(i7, f15.9, 6f15.6 )')NAMEt(i), BODYSt(i),(XSt(K,i),K=1,3),&
-             &(VSt(K,i),K=1,3)
-           endif
+            if ( code == 2 ) then
+               write(8,'(i7, f15.9, 6f15.6 )')NAMEt(i), BODYSt(i),(XSt(K,i),K=1,3),&
+               &(VSt(K,i),K=1,3)
+            endif
          enddo
       endif !End of major_output loop
 
-! Write to "overview.txt" file.
+! write to "overview.txt" file
       write(2,'(2f8.1, i7, f11.2, f8.3, 8f9.3)')AS(1), T6, NTOT, mtot, mtot/mtot0,&
       & LR(4), rt, rc, rc/LR(4), AS(13)*Rstar, LR(4)/rt, fbin0, fbint
       if ( mod (int(nint(T6)),tscreen) == 0 ) then
@@ -800,13 +744,11 @@ program read_nbody
          write(*,'(2f8.1, i7, f11.2, f8.3, 8f9.3)')AS(1), T6, NTOT, mtot, mtot/mtot0,&
          & LR(4), rt, rc, rc/LR(4), AS(13)*Rstar, LR(4)/rt, fbin0, fbint
       endif
-!
       if (debug == 1 ) then
          write (*,*)"Writing out arrays. Done."
          print*,"*************************************************************"
       endif
-
-! Write to radii file.
+! write to radii file
       write(7,'(2f9.2, 10f10.5)') AS(1), T6, ( LR(i),i=1,5 ), rt, rc, rc/LR(3), AS(13)*Rstar, LR(3)/rt
       FLUSH(2)
       FLUSH(3)
@@ -882,7 +824,6 @@ contains
 
    subroutine get_model_name ( arg1, res_init_ntot, res_mtot0 )
       implicit none
-      integer::i
       character(len=100) :: arg1
       character(len=10) :: arg2, arg3
       integer :: res_init_ntot
