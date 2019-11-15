@@ -1,9 +1,12 @@
 #### Read-nbody  
- read-nbody
  Author: S.Mohammad Hoseini Rad
+ 
  smhr313@gmail.com
+ 
  Nov 2012, IASBS, Zanjan
+ 
  Last modification: 15 November 2019 / 24 Aban 1398
+ 
 ## make:   
 ```sh
 $ make READ-NBODY-TAIL
@@ -37,6 +40,7 @@ $ READ-NBODY-TAIL OUT3 150000 100000.0
 ```
 In this new version, snapshots are saved in the `snapshot` folder and tidal tail stars are saved in the `tail` folder.
 This requires an nbody6 input parameter file with `KZ(23)=3`.
+
 ===============================
 
 AS arrays members according to "output.f" file in "Ncode" directory (Aarseth's NBODY 6).  
