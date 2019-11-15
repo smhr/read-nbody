@@ -4,3 +4,6 @@
 *.exe
 read-nbody
 read-nbody-tail
+READ-NBODY-2RT
+READ-NBODY-RT
+READ-NBODY-TAIL

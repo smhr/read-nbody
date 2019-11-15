@@ -1,22 +1,42 @@
 #### Read-nbody  
- read_nbody (st version)  
- Author: S.Mohammad Hoseini Rad  
- smhr313@gmail.com  
- Nov 2012, IASBS, Zanjan  
- Last modification: 3 September 2015 / 12 Shahrivar 1394
-## Compile:   
+ read-nbody
+ Author: S.Mohammad Hoseini Rad
+ smhr313@gmail.com
+ Nov 2012, IASBS, Zanjan
+ Last modification: 15 November 2019 / 24 Aban 1398
+## make:   
 ```sh
-$ compile.sh
+$ make READ-NBODY-TAIL
+$ make READ-NBODY-RT
+$ make READ-NBODY-2RT
 ```
 ## Usage example:
-Common run:  
+For stars inside tidal radius:
 ```sh
-$ read-nbody-st.exe OUT3 my_simulation 0 0
+$ READ-NBODY-RT OUT3 my_simulation 0 0
 ```
-Restarted run: 
+Restarted run example:
 ```sh
-$ read-nbody-st.exe OUT3 my_simulation 150000 100000.0
+$ READ-NBODY-RT OUT3 my_simulation 150000 100000.0
 ```
+For stars inside two*tidal radius:
+```sh
+$ READ-NBODY-2RT OUT3 my_simulation 0 0
+```
+Restarted run example:
+```sh
+$ READ-NBODY-2RT OUT3 my_simulation 150000 100000.0
+```
+For stars inside tidal radius and tidal tail:
+```sh
+$ READ-NBODY-TAIL OUT3 0 0
+```
+Restarted run example:
+```sh
+$ READ-NBODY-TAIL OUT3 150000 100000.0
+```
+In this new version, snapshots are saved in the `snapshot` folder and tidal tail stars are saved in the `tail` folder.
+This requires an nbody6 input parameter file with `KZ(23)=3`.
 ===============================
 
 AS arrays members according to "output.f" file in "Ncode" directory (Aarseth's NBODY 6).  
@@ -43,24 +63,6 @@ AS arrays members according to "output.f" file in "Ncode" directory (Aarseth's N
       AS(20) = DMIN1
 ===============================
 
-## Changes:
 
-29 Mar 2013: For solving incompatibility problem with old gfortran compilers (e.g 4.1.2), I re-inputted subroutines of read-mod.f90 module into main file (read-nbody.f90).
 
-8 Apr 2013: Calculation of tidal radius was added. Now just stars within tidal radius are considered for calculation of total number of stars and other main specifications of the cluster.
 
-10 Apr 2013: Directory creation with "model_name" name was added. Now, previous "All-" files are made in the "model_name" directory with the same prefix.
-
-Optimization options "-O3" and "-ffast-math" were added to "compile.sh" file.
-
-30 June 2013: "tout" option was added. It is an option for time interval of output on screen & harddisk.   
-It Also prevent neighbor arrays and kdtree2 pointers to be allocated. So if you have many time snapshots, by increasing 'tout', you can pass the memory overflow problem. (NBODY6 custom: Myr, NBODY6: N-body unit).  
-
-24 September 2013: Testing "NAME" of stars and inclusion of them within tidal radius were separated. Procedure of testing "NAME" was corrected. The code now is able to calculate core radius (Trenti et al. 2007). The code now is also able to find binaries (experimental).
-
-15 February 2014 / 26 Bahman 1392: Minor change in "overview.txt" header to coincide with my python script which creates "all_summary.txt" file.
-
-17 February 2015 / 28 Bahman 1393: "Add call kdtree2_destroy(tree)".
-
-3 September 2015 / 12 Shahrivar 1394: Add two input arguments "res_INIT_NTOT, res_mtot0" to deal with restarted simulations.
-20 January 2016 / 30 Dey 1394: Correct ecc2 formula

@@ -1,5 +1,5 @@
 !**************************************************************
-! read_nbody (st version)
+! read_nbody (rt version)
 ! Author: S.Mohammad Hoseini Rad
 ! smhr313@gmail.com
 ! Nov 2012, IASBS, Zanjan
