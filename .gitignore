@@ -3,3 +3,4 @@
 *.o
 *.exe
 read-nbody
+read-nbody-tail
