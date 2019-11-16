@@ -131,7 +131,7 @@ program read_nbody
 ! ******************************************
    code = 2         ! 1:NBODY6 custom, 2: NBODY6, 3: NBODY6 new custom version
    tscreen = 1      ! time interval of output on screen & harddisk. (NBODY6 custom: Myr, NBODY6: N-body unit)
-   tout = 100000    ! time interval of output on screen & harddisk (suppressed)
+   tout = 1000    ! time interval of output on screen & harddisk (suppressed)
    ! it also prevent neighbor arrays and kdtree2 pointers to be allocated
    ! so if you have many time snapshots, by increasing 'tout'
    ! you can pass the memory overflow problem. (NBODY6 custom: Myr, NBODY6: N-body unit)
@@ -204,16 +204,6 @@ program read_nbody
       if ( res_INIT_NTOT /= 0 ) then
          INIT_NTOT = res_INIT_NTOT
       endif
-! *******************************************
-!       if ( code == 1 .or. code == 3) then
-!          if ( mod (int(nint(AS(10))),tout) /= 0 ) cycle
-!       elseif ( code == 2 ) then
-! ! print*,"AS(1)=",AS(1)
-! ! bbb=mod (int(nint(AS(1))),tout)
-! ! 	print*, bbb
-!          if ( mod (int(nint(AS(1))),tout) /= 0 ) cycle
-!       endif
-! *******************************************
 
 ! *******************************************
 ! this condition is for appropriate termination of the program if cluster dissolves.
@@ -344,26 +334,22 @@ program read_nbody
          enddo
       endif
 !************************************
-! if (debug == 1 ) print*,"Checking dtout option."
-! print*,"salam", mod (int(nint(AS(1))),tout)
-! print*,AS(1), nint(AS(1)), int(nint(AS(1)))
-!       if ( code == 1 .or. code == 3 ) then
-!          if ( mod (int(nint(AS(10))),tout) /= 0 )then
-!             deallocate (AS, iiBODYS, iiXS, iiVS, iiRADIUS, iiNAME, iiKSTAR, iiZLMSTY)
-!             deallocate (ASS, BODYSS, XSS, VSS)
-!             cycle
-!          endif
-!       elseif ( code == 2 ) then
-!          if ( mod (int(nint(AS(1))),tout) /= 0 ) then
-!             deallocate (AS, iiBODYS, iiXS, iiVS, iiRADIUS, iiNAME, iiKSTAR, iiZLMSTY)
-!             deallocate (ASS, BODYSS, XSS, VSS)
-!             deallocate (ASt, iBODYSt, iXSt, iVSt, iNAMEt)
-!             deallocate (ASSt, BODYSSt, XSSt, VSSt)
-!             cycle
-!          endif
-!       endif
-
-
+if (debug == 1 ) print*,"Checking dtout option."
+      if ( code == 1 .or. code == 3 ) then
+         if ( mod (int(nint(AS(10))),tout) /= 0 )then
+            deallocate (AS, iiBODYS, iiXS, iiVS, iiRADIUS, iiNAME, iiKSTAR, iiZLMSTY)
+            deallocate (ASS, BODYSS, XSS, VSS)
+            cycle
+         endif
+      elseif ( code == 2 ) then
+         if ( mod (int(nint(AS(1))),tout) /= 0 ) then
+            deallocate (AS, iiBODYS, iiXS, iiVS, iiRADIUS, iiNAME, iiKSTAR, iiZLMSTY)
+            deallocate (ASS, BODYSS, XSS, VSS)
+            deallocate (ASt, iBODYSt, iXSt, iVSt, iNAMEt)
+            deallocate (ASSt, BODYSSt, XSSt, VSSt)
+            cycle
+         endif
+      endif
 !***********************************
 ! remove stars with index < 1
 !***********************************
@@ -420,12 +406,10 @@ program read_nbody
       enddo
       iNTAIL = 0
       deallocate  (iBODYSt, iXSt, iVSt, iNAMEt)
-
 !************************************
 ! finding all neighbors and their distances for all stars
 ! and saving them in list_neighbor_idx and list_neighbor_dis arrays correspondingly
 !************************************
-
       if (debug == 1 ) write (*,*) "Finding neighbor with iNTOT = ", iNTOT
       allocate(mydata(3,iNTOT))
       mydata = iXS ! putting x,y and z of all stars in mydata array to change them to single precision.
@@ -499,7 +483,6 @@ program read_nbody
             iL2(i,ll) = lx*lx + ly*ly + lz*lz
          enddo
       enddo
-
 !***********************************
 ! correcting the origin of coordinate system by subtracting all star coordinates from measured density center
 !***********************************
@@ -509,7 +492,6 @@ program read_nbody
             iXS(i,j) = iXS(i,j) - Xd(i)
          enddo
       enddo
-
 !***********************************
 ! test rt
 !***********************************
@@ -600,10 +582,10 @@ program read_nbody
          enddo
       enddo
       rt = rt * Rstar
-      
+
       if ( AS(1) < 0.0001) mtot0 = mtot
       if ( res_mtot0 /= 0. ) mtot0 = res_mtot0
-      
+
       do while ( check /= 6 )
          mtemp = 0
          do i = 1, NTOT
@@ -630,7 +612,6 @@ program read_nbody
          rtemp = rtemp + rstep
       enddo
       if (debug == 1 ) write (*,*)"Calculating LRs. Done."
-
 !***********************************
 ! compute core radius (Trenti et al. 2007).
 !************************************
@@ -645,7 +626,6 @@ program read_nbody
       enddo
       rc = sqrt( rc / rho2_tot_in_rh )
       if (debug == 1 ) write (*,*)"Calculating Core Radius. Done."
-
 !***********************************
 ! finding binaries.
 !************************************
@@ -689,7 +669,6 @@ program read_nbody
 
       fbin0 = float( Nbin ) / N
       fbint =  float( Nbin ) / NTOT
-
 !************************************
 ! writing out outputs
 !************************************
