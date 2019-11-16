@@ -145,6 +145,7 @@ program read_nbody
 ! Please note just use one of Ndiss or Mdiss options
    find_binary = 1  ! 0: Skip to find binary; 1: Find binaries
    binary_energy_criterion = -0.001
+   mtot0 = 0.
 
    ! ********* Input & Output files. *********
    ! *****************************************
@@ -598,17 +599,11 @@ program read_nbody
             XSt(k,i)=XSt(k,i)*Rstar; VSt(k,i)=VSt(K,i)*Vstar
          enddo
       enddo
-      if ( AS(1) < 0.0001) then
-         mtot0 = mtot
-      else
-         mtot0 = 0.
-      endif
       rt = rt * Rstar
-      if ( res_mtot0 /= 0. ) then
-         mtot0 = res_mtot0
-      else
-         mtot0 = 0.
-      endif
+      
+      if ( AS(1) < 0.0001) mtot0 = mtot
+      if ( res_mtot0 /= 0. ) mtot0 = res_mtot0
+      
       do while ( check /= 6 )
          mtemp = 0
          do i = 1, NTOT
