@@ -762,7 +762,7 @@ program read_nbody
          if (code == 5) then
             do i=1,NTAIL
                if ( code == 5 ) then
-                  write(8,'(i7, f15.9, 6f15.6 )')NAMEt(i), BODYSt(i),(XSt(K,i),K=1,3),&
+                  write(8,'(i7, f10.3, 6f35.4 )')NAMEt(i), BODYSt(i),(XSt(K,i),K=1,3),&
                   &(VSt(K,i),K=1,3)
                endif
             enddo
