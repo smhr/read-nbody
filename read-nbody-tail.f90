@@ -72,6 +72,10 @@ program read_nbody
    real*4,dimension(:,:),allocatable::XSSt,VSSt
    real*4,dimension(:),allocatable::BODYSSt,ASSt  ! used for converting single precision to double precision ( if code = 2)
 ! ******************************************
+   real*8,dimension(3)::RG,VG
+   real*8::rrt,OMEGA,mtot_temp,rt_temp
+   integer::ntot_temp
+! ******************************************
    real*8::mtot, imtot, T6, mtot0
    integer,dimension(:,:),allocatable::list_neighbor_idx ! neighbor index array
    real,dimension(:,:),allocatable::list_neighbor_dis ! neighbor distance array
@@ -129,13 +133,13 @@ program read_nbody
 
 ! ************ Code options ****************
 ! ******************************************
-   code = 5         ! 1:NBODY6 custom, 2: NBODY6, 3: NBODY6 new custom version
+   code = 4         ! 1:NBODY6 custom, 2: NBODY6, 3: NBODY6 new custom ver, 4: NBODY6 new size_scale ver, 5: NBODY6 size_scale ver with separate OUT33
    tscreen = 1      ! time interval of output on screen & harddisk. (NBODY6 custom: Myr, NBODY6: N-body unit)
    tout = 1    ! time interval of output on screen & harddisk (suppressed)
    ! it also prevent neighbor arrays and kdtree2 pointers to be allocated
    ! so if you have many time snapshots, by increasing 'tout'
    ! you can pass the memory overflow problem. (NBODY6 custom: Myr, NBODY6: N-body unit)
-   debug = 0        ! 1: debug mode
+   debug = 1        ! 1: debug mode
    diss_check = 1   ! 1: check dissolution of cluster; 0: no check
    Ndiss = 0        ! by reaching to this fraction of initial number of stars, the cluster is considered as a dissolved cluster;
    ! 0: Suppress this option
@@ -160,7 +164,7 @@ program read_nbody
    dir_command = 'mkdir snapshot'
    call system ( dir_command )
    dir_command = 'mkdir tail'
-   print*,dir_command
+   write(*,*)dir_command
    call system ( dir_command )
 
    call STAT (input_file, buff,status) ! calculating size of input file
@@ -183,7 +187,7 @@ program read_nbody
 
 ! *******************************************
 ! define_arrays_size ( code, input_file, loop_index, NTOT, MODEL, NRUN, NK, N, INIT_NTOT ) ! Read number of particles in each loop.
-      if (code == 1 .or. code == 3) then
+      if (code == 1 .or. code == 3 .or. code == 4) then
          read(1, iostat=IO)iiNTOT,NK,N
          if (debug == 1) write (*,'(3i10)') iiNTOT,NK,N
          if (loop_index == 0) INIT_NTOT = iiNTOT
@@ -254,9 +258,9 @@ program read_nbody
       if (debug == 1) print*,"Allocating readin arrays."
 
       iiRADIUS = 0 ;iiZLMSTY = 0; iiKSTAR = 0
-      rt = 0; T6 = 0; Mstar =0; Rstar = 0; Vstar = 0; Tstar = 0
+      T6 = 0; Mstar =0; Rstar = 0; Vstar = 0; Tstar = 0
 
-      if (code == 1 .or. code == 3) then
+      if (code == 1 .or. code == 3 .or. code == 4) then
          read(1, iostat=IO)(AS(K),K=1,NK),(iiBODYS(J),J=1,iiNTOT),((iiXS(K,J),K=1,3),J=1,iiNTOT),((iiVS(K,J),K=1,3),J=1,iiNTOT),&
             (iiRADIUS(J),J=1,iiNTOT),(iiNAME(J),J=1,iiNTOT),&
             (iiKSTAR(J),J=1,iiNTOT),(iiZLMSTY(J),J=1,iiNTOT)
@@ -268,13 +272,20 @@ program read_nbody
             Mstar = AS(4)
             Rstar = AS(3)
             Vstar = AS(12)
-         elseif (code == 3) then ! new nbody6 version
-            rt = AS(5) ! tidal Radius.
+         elseif (code == 3 .or. code == 4) then ! new nbody6 version
+            if (AS(1) < 0.0001) rt = AS(5) ! tidal Radius.
             Tstar = AS(11)
             T6 = AS(1) * Tstar ! Astrophysical time (Myr), Nbody time * TSCALE
             Mstar = AS(4)
             Rstar = AS(3)
             Vstar = AS(12)
+!             RG(1) = AS(21)
+!             RG(2) = AS(22)
+!             RG(3) = AS(23)
+!             VG(1) = AS(24)
+!             VG(2) = AS(25)
+!             VG(3) = AS(26)
+            OMEGA = AS(6)/2.
          endif
          if (IO /= 0) then
             err = 1
@@ -340,7 +351,7 @@ program read_nbody
             deallocate (ASS, BODYSS, XSS, VSS)
             cycle
          endif
-      elseif (code == 2 .or. code == 5) then
+      elseif (code == 2 .or. code == 5 .or. code == 4) then
          if (mod (int(nint(AS(1))),tout) /= 0) then
             write(*,*) "No calculation for time = ", AS(1)
             if (code == 5) then
@@ -506,7 +517,7 @@ program read_nbody
       if ( AS(1) > 0.0001) then ! This condition is for tidal radius to be correct at t=0 and includes all stars.
          do i = 1, iNTOT
             ir(i) = sqrt( iXS(1,i)*iXS(1,i) + iXS(2,i)*iXS(2,i) + iXS(3,i)*iXS(3,i) )
-            if ( ir(i) <= rt ) then
+            if ( ir(i) <= 1e20*rt ) then
                k = k + 1
             endif
          enddo
@@ -529,7 +540,7 @@ program read_nbody
          k = 0
          do i = 1, iNTOT
             ir(i) = sqrt( iXS(1,i)*iXS(1,i) + iXS(2,i)*iXS(2,i) + iXS(3,i)*iXS(3,i) )
-            if ( ir(i) <= rt ) then
+            if ( ir(i) <= 1e20*rt ) then
                k = k + 1
                r(k) = ir(i)
                BODYS(k) = iBODYS(i)
@@ -566,10 +577,9 @@ program read_nbody
       deallocate ( idel_r, idel_v2, inei_bodys, inei_NAME, iL2 )
       if (debug == 1 ) write (*,*) "Done."
 !***********************************
-! compute Lagrangian radii and changing units
+! Converting from Nbody units to Astrophysical units
 !************************************
-      rtemp = 0; mtemp = 0; check = 1
-      if (debug == 1 ) write (*,*) "Calculating LRs."
+      if (debug == 1 ) write (*,*) "Converting from Nbody units to Astrophysical units."
       mtot = 0
       do i = 1, NTOT ! Converting from Nbody units to Astrophysical units:
          BODYS(i) = BODYS(i) * Mstar ! Converting masses to Solar Mass.
@@ -580,6 +590,30 @@ program read_nbody
             XS(k,i)=XS(k,i)*Rstar; VS(k,i)=VS(K,i)*Vstar
          enddo
       enddo
+      if (AS(1) < 0.0001) rt = rt * Rstar
+      OMEGA = OMEGA*Vstar/Rstar ! Convert to Astrophysical unit (kms^-1/pc)
+      ! compute new tidal radius
+      if (code == 4 .AND. AS(1) > 0.0001) then
+      if (debug == 1 ) write (*,*) "Computing new tidal radius."
+         mtot_temp = 0.
+         rt_temp = 0.
+         do while (abs(rt-rt_temp)>0.01)
+            if (debug == 1 ) print*,rt,rt_temp,mtot_temp,"###########"
+            rt_temp = rt
+            mtot_temp = 0.
+            ntot_temp = 0
+            do i = 1, NTOT
+               if (r(i) <= rt_temp) then
+                  mtot_temp = mtot_temp + BODYS(i)
+                  ntot_temp = ntot_temp + 1
+               endif
+            enddo
+            rt = (G*mtot_temp/(2.*OMEGA*OMEGA))**0.3333 ! In Astrophysical unit (pc)
+         enddo
+         NTOT = ntot_temp
+         mtot = mtot_temp ! This will rewrite mtot for the second and its subsequent snapshots
+         if (debug == 1 ) write(*,*)"omega, rt = ",OMEGA,rt
+      endif
       if (code == 5) then
          do i = 1, NTAIL ! Converting from Nbody units to Astrophysical units (tidal tail):
             BODYSt(i) = BODYSt(i) * Mstar
@@ -588,8 +622,12 @@ program read_nbody
             enddo
          enddo
       endif
-      rt = rt * Rstar
 
+!***********************************
+! compute Lagrangian radii and changing units
+!************************************
+      rtemp = 0; mtemp = 0; check = 1
+      if (debug == 1 ) write (*,*) "Calculating LRs."
       if ( AS(1) < 0.0001) mtot0 = mtot
       if ( res_mtot0 /= 0. ) mtot0 = res_mtot0
 
@@ -640,7 +678,6 @@ program read_nbody
          if (debug == 1 ) write (*,*)"Finding binaries."
          Ebin = 0; a = 0; ecc = 0; ecc2 = 0; Nbin = 0; fbin0 = 0; fbint = 0; j = 0
          do i = 1, NTOT
-            if (name(i)==0) print*,"name=",name(i),"for i =", i
             ll=0
             do ll=2, n_neighbor+1
                nei_BODYS(i, ll) = nei_BODYS(i, ll) * Mstar
@@ -669,8 +706,8 @@ program read_nbody
          Nbin = Nbin / 2  ! because each binary counted twice
 
          if (debug == 1 ) then
-            print*,Nbin, "binaries were found."
-            write (*,*)"Done."
+            write(*,*)Nbin, "binaries were found."
+            write(*,*)"Done."
          endif
       endif !  end of main binary finding condition
 
@@ -692,16 +729,31 @@ program read_nbody
          else
             output_file = trim(output_file)
          endif
-         if (code == 5) output_file_tail = 'tail/' // trim(output_file)
+         if (code == 5 .or. code == 4) output_file_tail = 'tail/' // trim(output_file)
          output_file = 'snapshot/' // trim(output_file)
          output_file = sweep_blanks(output_file)
-         if (code == 5) output_file_tail = sweep_blanks(output_file_tail)
+         if (code == 5 .or. code == 4) output_file_tail = sweep_blanks(output_file_tail)
          open(4,file=output_file)
-         if (code == 5) open(8,file=output_file_tail)
+         if (code == 5 .or. code == 4) open(8,file=output_file_tail)
          do i=1,NTOT
             if (code == 1 .or. code == 3) then
                write(4,'(i7, f14.9, 6f13.6 , i3, 2f15.5)')NAME(i), BODYS(i),(XS(K,i),K=1,3),&
-               &(VS(K,i),K=1,3), KSTAR(i), ZLMSTY(i), RADIUS(i)
+                    &(VS(K,i),K=1,3), KSTAR(i), ZLMSTY(i), RADIUS(i)
+            elseif (code == 4) then
+               if ( AS(1) < 0.0001) then
+                  rrt = 1e20*rt
+               else
+                  rrt = rt
+               endif
+               if (r(i) <= rrt) then
+                  write(4,'(i7, f14.9, 6f13.6 , i3, 2f15.5)')NAME(i),&
+                       & BODYS(i),(XS(K,i),K=1,3),&
+                       &(VS(K,i),K=1,3), KSTAR(i), ZLMSTY(i), RADIUS(i)
+               else
+                  write(8,'(i7, f14.9, 6f13.6 , i3, 2f15.5)')NAME(i),&
+                       & BODYS(i),(XS(K,i),K=1,3),&
+                       &(VS(K,i),K=1,3), KSTAR(i), ZLMSTY(i), RADIUS(i)
+               endif
             elseif (code == 2 .or. code == 5) then
                write(4,'(i7, f14.9, 6f13.6 )')NAME(i), BODYS(i),(XS(K,i),K=1,3),&
                &(VS(K,i),K=1,3)
