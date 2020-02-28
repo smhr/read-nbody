@@ -3,7 +3,7 @@
 ! Author: S.Mohammad Hoseini Rad
 ! smhr313@gmail.com
 ! Nov 2012, IASBS, Zanjan
-! Last modification: 15 November 2019 / 24 Aban 1398
+! Last modification: February 28, 2019 / 9 Esfand 1398
 !**************************************************************
 !     This program is free software; you can redistribute it and/or modify
 !     it under the terms of the GNU General Public License as published by
@@ -294,7 +294,7 @@ program read_nbody
       elseif (code == 2 .or. code == 5) then
          read(1, iostat=IO)(ASS(K),K=1,NK),(BODYSS(J),J=1,iiNTOT),((XSS(K,J),K=1,3),J=1,iiNTOT),((VSS(K,J),K=1,3),J=1,iiNTOT),&
                                            (iiNAME(J),J=1,iiNTOT)
-         if (debug == 1 ) write (*,'(i3,f14.9)')(k,ASS(K),K=1,NK)
+         if (debug == 1 ) write (*,'(i3,f16.9)')(k,ASS(K),K=1,NK)
          do J=1, NK ! Convert to double precision
             AS(J) = ASS(J)
          enddo
@@ -320,7 +320,7 @@ program read_nbody
          ! Read tail data
         read(33, iostat=IO)(ASSt(K),K=1,13),(BODYSSt(J),J=1,iNTAIL),((XSSt(K,J),K=1,3),J=1,iNTAIL),((VSSt(K,J),K=1,3),J=1,iNTAIL),&
                                             (iNAMEt(J),J=1,iNTAIL)
-        if (debug == 1 ) write (*,'(i3,f14.9)')(k,ASSt(K),K=1,13)
+        if (debug == 1 ) write (*,'(i3,f16.9)')(k,ASSt(K),K=1,13)
         do J=1, 13 ! Convert to double precision
            ASt(J) = ASSt(J)
         enddo
@@ -737,7 +737,7 @@ program read_nbody
          if (code == 5 .or. code == 4) open(8,file=output_file_tail)
          do i=1,NTOT
             if (code == 1 .or. code == 3) then
-               write(4,'(i7, f14.9, 6f13.6 , i3, 2f15.5)')NAME(i), BODYS(i),(XS(K,i),K=1,3),&
+               write(4,'(i7, f16.9, 6f16.9 , i3, 2f16.9)')NAME(i), BODYS(i),(XS(K,i),K=1,3),&
                     &(VS(K,i),K=1,3), KSTAR(i), ZLMSTY(i), RADIUS(i)
             elseif (code == 4) then
                if ( AS(1) < 0.0001) then
@@ -746,16 +746,16 @@ program read_nbody
                   rrt = rt
                endif
                if (r(i) <= rrt) then
-                  write(4,'(i7, f14.9, 6f13.6 , i3, 2f15.5)')NAME(i),&
+                  write(4,'(i7, f16.9, 6f16.9 , i3, 2f16.9)')NAME(i),&
                        & BODYS(i),(XS(K,i),K=1,3),&
                        &(VS(K,i),K=1,3), KSTAR(i), ZLMSTY(i), RADIUS(i)
                else
-                  write(8,'(i7, f14.9, 6f13.6 , i3, 2f15.5)')NAME(i),&
+                  write(8,'(i7, f16.9, 6f16.9 , i3, 2f16.9)')NAME(i),&
                        & BODYS(i),(XS(K,i),K=1,3),&
                        &(VS(K,i),K=1,3), KSTAR(i), ZLMSTY(i), RADIUS(i)
                endif
             elseif (code == 2 .or. code == 5) then
-               write(4,'(i7, f14.9, 6f13.6 )')NAME(i), BODYS(i),(XS(K,i),K=1,3),&
+               write(4,'(i7, f16.9, 6f16.9 )')NAME(i), BODYS(i),(XS(K,i),K=1,3),&
                &(VS(K,i),K=1,3)
             endif
          enddo
