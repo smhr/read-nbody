@@ -81,8 +81,9 @@ program read_nbody
    real*4,dimension(:),allocatable::BODYSSt,ASSt  ! used for converting single precision to double precision ( if code = 2)
 ! ******************************************
    real*8,dimension(3)::RG,VG
-   real*8::rrt,OMEGA,mtot_temp,rt_temp
+   real*8::rrt,OMEGA,mtot_temp,rt_temp,rt_resol,rt_start
    integer::ntot_temp
+   logical::aaa
 ! ******************************************
    real*8::mtot, imtot, T6, mtot0
    integer,dimension(:,:),allocatable::list_neighbor_idx ! neighbor index array
@@ -158,6 +159,7 @@ program read_nbody
    find_binary = 1  ! 0: Skip to find binary; 1: Find binaries
    binary_energy_criterion = -0.001
    mtot0 = 0.
+   rt_resol = 0.01  ! Resolution for tidal radius computation (for code = 4).
 
    ! ********* Input & Output files. *********
    ! *****************************************
@@ -473,10 +475,13 @@ program read_nbody
             m_tot_5th=m_tot_5th+iBODYS(list_neighbor_idx (i,ll)) ! total mass of fifth nearest neibors
          enddo
          irho(i) = m_tot_5th/(sixth_neighbor_distance ** 3.)
-         irho_tot = irho_tot + irho(i)
-         irho_times_dis_tot(1) = irho_times_dis_tot(1) + irho(i) * iXS(1,i)
-         irho_times_dis_tot(2) = irho_times_dis_tot(2) + irho(i) * iXS(2,i)
-         irho_times_dis_tot(3) = irho_times_dis_tot(3) + irho(i) * iXS(3,i)
+         !!!!!!!!!!!!!!!!!!
+         if (sqrt(iXS(1,i)*iXS(1,i) + iXS(2,i)*iXS(2,i) + iXS(3,i)*iXS(3,i)) <= rt) then
+            irho_tot = irho_tot + irho(i)
+            irho_times_dis_tot(1) = irho_times_dis_tot(1) + irho(i) * iXS(1,i)
+            irho_times_dis_tot(2) = irho_times_dis_tot(2) + irho(i) * iXS(2,i)
+            irho_times_dis_tot(3) = irho_times_dis_tot(3) + irho(i) * iXS(3,i)
+        endif
       enddo
       Xd(1) = ( irho_times_dis_tot(1)/irho_tot )
       Xd(2) = ( irho_times_dis_tot(2)/irho_tot )
@@ -527,20 +532,38 @@ program read_nbody
       if (debug == 1 ) write(6,*)"omega, rt = ",OMEGA,rt
       if (code == 4 .AND. AS(1) > 0.0001) then
       if (debug == 1 ) write (*,*) "Computing new tidal radius."
-         mtot_temp = 0.
-         rt_temp = 0.
-         do while (abs(rt-rt_temp)>0.01)
-            if (debug == 1 ) write(6,*)rt,rt_temp,mtot_temp,"###########"
-            rt_temp = rt
+!          mtot_temp = 0.
+!          rt_temp = 0.
+         rt_start = rt
+         rt_resol = 0.01
+         aaa = .true.
+         print*,aaa,"aaa"
+         do while (aaa)
             mtot_temp = 0.
-            ntot_temp = 0
-            do i = 1, iNTOT
-               if (ir(i)*Rstar <= rt_temp) then
-                  mtot_temp = mtot_temp + iBODYS(i)*Mstar
-                  ntot_temp = ntot_temp + 1
+            rt_temp = 0.
+            rt = rt_start
+            rt_resol = 0.01
+            do while (abs(rt-rt_temp)>rt_resol)
+               if (debug == 1 ) write(6,*)rt,rt_temp,mtot_temp,"###########"
+               rt_temp = rt
+               mtot_temp = 0.
+               ntot_temp = 0
+               do i = 1, iNTOT
+                  if (ir(i)*Rstar <= rt_temp) then
+                     mtot_temp = mtot_temp + iBODYS(i)*Mstar
+                     ntot_temp = ntot_temp + 1
+                  endif
+               enddo
+               rt = (G*mtot_temp/(2.*OMEGA*OMEGA))**0.3333 ! In Astrophysical unit (pc)
+               if ((rt_start-rt)>0.75*rt_start) then
+                  rt_resol = rt_resol + 0.5*rt_resol
+                  if (debug == 1 ) write(6,*),"WARNING: rt_resol is increased to", rt_resol
+                  aaa = .true.; exit
+               else
+                  aaa = .false.; exit
                endif
             enddo
-            rt = (G*mtot_temp/(2.*OMEGA*OMEGA))**0.3333 ! In Astrophysical unit (pc)
+!             aaa = .false.
          enddo
          if (debug == 1 ) write(6,*),"new rt", rt
          if (debug == 1) write(6,*)"NTOT, ntot_temp", NTOT, ntot_temp
@@ -666,80 +689,6 @@ program read_nbody
       endif
       
       if ( AS(1) > 0.0001) rt = rt * Rstar
-!       OMEGA = OMEGA*Vstar/Rstar ! Convert to Astrophysical unit (kms^-1/pc)
-!       ! compute new tidal radius
-!       if (code == 4 .AND. AS(1) > 0.0001) then
-!       if (debug == 1 ) write (*,*) "Computing new tidal radius."
-!          mtot_temp = 0.
-!          rt_temp = 0.
-!          do while (abs(rt-rt_temp)>0.01)
-!             if (debug == 1 ) print*,rt,rt_temp,mtot_temp,"###########"
-!             rt_temp = rt
-!             mtot_temp = 0.
-!             ntot_temp = 0
-!             do i = 1, iNTOT
-!                if (ir(i)*Rstar <= rt_temp) then
-!                   mtot_temp = mtot_temp + iBODYS(i)*Mstar
-!                   ntot_temp = ntot_temp + 1
-!                endif
-!             enddo
-!             rt = (G*mtot_temp/(2.*OMEGA*OMEGA))**0.3333 ! In Astrophysical unit (pc)
-!          enddo
-!          if (debug == 1) write(6,*)"NTOT, ntot_temp", NTOT, ntot_temp
-!          if (NTOT /= ntot_temp) write(6,*)"WARNING: NTOT /= ntot_temp"
-!          NTOT = ntot_temp
-!          mtot = mtot_temp ! This will rewrite mtot for the second and its subsequent snapshots
-!       endif
-!       if (debug == 1 ) write(6,*)"omega, rt = ",OMEGA,rt
-      
-!       if (code == 4 .AND. AS(1) > 0.0001) then
-!          deallocate (BODYS, XS, VS, RADIUS, NAME, KSTAR, ZLMSTY, r)
-!          deallocate (rho, del_r, del_v2, nei_BODYS, nei_NAME, L2)
-!          allocate (BODYS(NTOT), XS(NTOT), VS(NTOT), RADIUS(NTOT),&
-!          &         NAME(NTOT), KSTAR(NTOT), ZLMSTY(NTOT), r(NTOT))
-!          allocate (rho(NTOT), del_r(NTOT), del_v2(NTOT),&
-!          &         nei_BODYS(NTOT), nei_NAME(NTOT), L2(NTOT))
-!          
-!          k = 0; ko = 0
-!          do i = 1, iNTOT
-!             ir(i) = sqrt( iXS(1,i)*iXS(1,i) + iXS(2,i)*iXS(2,i) + iXS(3,i)*iXS(3,i) )
-!             if ( ir(i)*Rstar <= rt ) then
-!             k = k + 1
-!                r(k) = ir(i)
-!                BODYS(k) = iBODYS(i)
-!                XS(1,k) = iXS(1,i); XS(2,k) = iXS(2,i); XS(3,k) = iXS(3,i)
-!                VS(1,k) = iVS(1,i); VS(2,k) = iVS(2,i); VS(3,k) = iVS(3,i)
-!                RADIUS(k) = iRADIUS(i)
-!                NAME(k) = iNAME(i)
-!                KSTAR(k) = iKSTAR(i)
-!                ZLMSTY(k) = iZLMSTY(i)
-!                rho(k) = irho(i)
-!                ll = 0
-!                do ll = 2, n_neighbor + 1
-!                   del_r(k, ll) = idel_r(i, ll)
-!                   del_v2(k, ll) = idel_v2(i, ll)
-!                   L2(k, ll) = iL2(i, ll)
-!                   nei_bodys(k, ll) = inei_bodys(i , ll)
-!                   nei_NAME(k, ll) = inei_NAME(i, ll)
-!                enddo
-!             else
-!                if (code == 4) then
-!                   ko = ko + 1
-!                   !r(k) = ir(i)
-!                   BODYSo(ko) = iBODYS(i)
-!                   XSo(1,ko) = iXS(1,i); XSo(2,ko) = iXS(2,i); XSo(3,ko) = iXS(3,i)
-!                   VSo(1,ko) = iVS(1,i); VSo(2,ko) = iVS(2,i); VSo(3,ko) = iVS(3,i)
-!                   RADIUSo(ko) = iRADIUS(i)
-!                   NAMEo(ko) = iNAME(i)
-!                   KSTARo(ko) = iKSTAR(i)
-!                   ZLMSTYo(ko) = iZLMSTY(i)
-!                endif
-!             endif
-!          enddo
-!          NTOT = k
-!          NTOT_out = ko
-!          
-!       endif
       
       if (code == 5) then
          do i = 1, NTAIL ! Converting from Nbody units to Astrophysical units (tidal tail):
